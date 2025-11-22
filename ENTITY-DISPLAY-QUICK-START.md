@@ -1,4 +1,21 @@
-# Entity Display Card - Rychlý start
+# Entity Display Card - Rychlý start 🎨
+
+## ✨ Co je nového v 2025
+
+**🎨 Moderní Design:**
+- Glass morphism efekt s blur
+- Barevné gradienty
+- Plynulé animace a hover efekty
+- Pulse a glow efekty pro varování
+
+**📊 Funkční Grafy:**
+- Skutečné grafy s History API
+- 3 typy: line, area, bar
+- Konfigurovatelná výška a časové období
+
+**🔄 Vylepšené Řazení:**
+- Vzestupně / sestupně (sort_reverse)
+- Jednoduchý checkbox v editoru
 
 ## 🚀 Instalace
 
@@ -48,7 +65,7 @@ filter:
 - Každá karta má barevnou ikonu podle hodnoty
 - Automaticky seskupí podle typu
 
-### Příklad 3: Baterie k výměně
+### Příklad 3: Baterie k výměně (nejslabší první)
 
 ```yaml
 type: custom:entity-display-card
@@ -57,12 +74,56 @@ filter:
   device_class:
     - battery
 sort_by: state
+# sort_reverse: false = vzestupně (od nejnižší)
 ```
 
 **Co to dělá:**
 - Zobrazí všechny baterie
-- Seřadí od nejnižší po nejvyšší
+- Seřadí od nejnižší po nejvyšší (vzestupně)
 - Zvýrazní červeně slabé baterie (< 20%)
+- Pulse animace pro varování
+
+### Příklad 4: Nejv yšší teploty (sestupně)
+
+```yaml
+type: custom:entity-display-card
+title: "🔥 Nejteplejší místnosti"
+filter:
+  device_class:
+    - temperature
+sort_by: state
+sort_reverse: true  # Sestupně - od nejvyšší
+```
+
+**Co to dělá:**
+- Seřadí teploty od nejvyšší po nejnižší
+- Moderní glass morphism design
+- Glow efekt při hover
+- Gradient ikony podle teploty
+
+### Příklad 5: Grafy s historií
+
+```yaml
+type: custom:entity-display-card
+title: "📊 Klima s grafy"
+layout: detailed
+show_graph: true
+graph_type: area     # line, area, bar
+graph_hours: 48      # 48 hodin historie
+graph_height: 120    # Výška grafu v px
+graph_fill: true     # Vyplnit oblast
+filter:
+  device_class:
+    - temperature
+    - humidity
+```
+
+**Co to dělá:**
+- Zobrazí skutečné grafy z History API
+- Area graf s gradientem
+- 48 hodin historie
+- Automatické škálování min/max
+- Slide animace při načítání
 
 ## 🎨 Layouty
 
@@ -152,6 +213,7 @@ columns: 2                          # Počet sloupců (grid/compact)
 # Seskupení a řazení
 group_by: type                      # type/area/floor/none
 sort_by: name                       # name/state/last_changed/area
+sort_reverse: false                 # ✨ NOVÉ: true = sestupně, false = vzestupně
 
 # Zobrazení
 show_header: true                   # Zobrazit hlavičku
@@ -160,7 +222,13 @@ show_name: true                     # Zobrazit názvy
 show_state: true                    # Zobrazit hodnoty
 show_unit: true                     # Zobrazit jednotky
 show_last_changed: false            # Zobrazit čas změny
-show_graph: false                   # Zobrazit grafy
+show_graph: false                   # Zobrazit grafy (detailed layout)
+
+# ✨ NOVÉ: Graf konfigurace
+graph_type: line                    # line/area/bar
+graph_hours: 24                     # Počet hodin historie (1-168)
+graph_height: 100                   # Výška grafu v px (50-300)
+graph_fill: true                    # Vyplnit oblast pod grafem
 
 # Filtry
 filter:
@@ -174,6 +242,26 @@ entities:
   - sensor.living_room_temperature
   - sensor.bedroom_humidity
 ```
+
+## 🎨 Nové Design Funkce
+
+### Glass Morphism
+- Automatický blur efekt na grid kartách
+- Pololpůhledné pozadí
+- Moderní estetika
+
+### Animace a Efekty
+- **Hover efekty**: Scale, rotate, glow
+- **Pulse**: Varování s pulzující animací
+- **Shimmer**: Světelný efekt na group headers
+- **Slide**: Animace na gauge bars
+- **Float**: Plovoucí ikona v empty state
+
+### Barevné Gradienty
+- Gradient text na nadpisech
+- Gradient background na kartách
+- Gradient progress bars
+- Gradient graf fills
 
 ## 🌈 Podporované typy (device_class)
 
