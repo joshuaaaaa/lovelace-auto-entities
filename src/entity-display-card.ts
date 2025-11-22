@@ -8,6 +8,7 @@ import {
   ValueRange,
   EntityTypeConfig,
 } from './entity-display-types';
+import { modernStyles } from './entity-display-modern-styles.css';
 import './editor/entity-display-editor';
 
 class EntityDisplayCard extends LitElement {
@@ -321,23 +322,35 @@ class EntityDisplayCard extends LitElement {
       return entities;
     }
 
-    return entities.sort((a, b) => {
+    const sorted = entities.sort((a, b) => {
+      let result = 0;
+
       switch (this._config.sort_by) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          result = a.name.localeCompare(b.name);
+          break;
         case 'state':
           if (typeof a.state === 'number' && typeof b.state === 'number') {
-            return a.state - b.state;
+            result = a.state - b.state;
+          } else {
+            result = String(a.state).localeCompare(String(b.state));
           }
-          return String(a.state).localeCompare(String(b.state));
+          break;
         case 'last_changed':
-          return b.last_changed.getTime() - a.last_changed.getTime();
+          result = b.last_changed.getTime() - a.last_changed.getTime();
+          break;
         case 'area':
-          return (a.area || '').localeCompare(b.area || '');
+          result = (a.area || '').localeCompare(b.area || '');
+          break;
         default:
-          return 0;
+          result = 0;
       }
+
+      // Aplikovat reverse pokud je nastaveno
+      return this._config.sort_reverse ? -result : result;
     });
+
+    return sorted;
   }
 
   private _renderEntity(entity: ProcessedEntity) {
@@ -436,8 +449,10 @@ class EntityDisplayCard extends LitElement {
     const typeConfig = this._getTypeConfig(entity.device_class || '', entity.entity_id.split('.')[0]);
     const range = this._getValueRange(entity.state, typeConfig);
 
+    const graphHeight = this._config.graph_height || 100;
+
     return html`
-      <div class="detailed-item ${entity.warning ? 'warning' : ''}" @click=${() => this._handleEntityClick(entity)}>
+      <div class="detailed-item ${entity.warning ? 'warning' : ''}" data-entity-id="${entity.entity_id}" @click=${() => this._handleEntityClick(entity)}>
         <div class="detailed-header">
           <div class="detailed-icon" style="background: ${entity.color}">
             <ha-icon .icon=${entity.icon}></ha-icon>
@@ -456,7 +471,7 @@ class EntityDisplayCard extends LitElement {
         </div>
         ${this._config.show_graph && typeConfig.show_graph
           ? html`<div class="detailed-graph">
-              <div class="graph-placeholder">Graf (historie 24h)</div>
+              ${this._renderGraph(entity, this.offsetWidth - 32 || 300, graphHeight)}
             </div>`
           : ''}
         <div class="detailed-footer">
@@ -490,6 +505,118 @@ class EntityDisplayCard extends LitElement {
     if (hours > 0) return `před ${hours}h`;
     if (minutes > 0) return `před ${minutes}m`;
     return 'právě teď';
+  }
+
+  private async _fetchHistory(entityId: string, hours: number = 24): Promise<number[][]> {
+    if (!this.hass) return [];
+
+    const endTime = new Date();
+    const startTime = new Date(endTime.getTime() - hours * 60 * 60 * 1000);
+
+    try {
+      const history = await this.hass.callWS({
+        type: 'history/history_during_period',
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        entity_ids: [entityId],
+        minimal_response: true,
+        no_attributes: true,
+      });
+
+      if (!history || !history[0] || history[0].length === 0) {
+        return [];
+      }
+
+      // Zpracování dat - [timestamp, value]
+      const dataPoints: number[][] = [];
+      for (const point of history[0]) {
+        const value = parseFloat(point.s);
+        if (!isNaN(value) && isFinite(value)) {
+          dataPoints.push([new Date(point.lu * 1000).getTime(), value]);
+        }
+      }
+
+      return dataPoints;
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      return [];
+    }
+  }
+
+  private _renderGraph(entity: ProcessedEntity, width: number = 300, height: number = 80) {
+    const typeConfig = this._getTypeConfig(entity.device_class || '', entity.entity_id.split('.')[0]);
+    const graphHours = this._config.graph_hours || typeConfig.graph_hours || 24;
+    const graphType = this._config.graph_type || 'line';
+    const lineColor = this._config.graph_line_color || entity.color;
+    const fill = this._config.graph_fill !== false;
+
+    // Načteme historii asynchronně
+    this._fetchHistory(entity.entity_id, graphHours).then((dataPoints) => {
+      if (dataPoints.length === 0) return;
+
+      // Najdeme min a max hodnoty pro škálování
+      const values = dataPoints.map(d => d[1]);
+      const minValue = Math.min(...values);
+      const maxValue = Math.max(...values);
+      const range = maxValue - minValue || 1;
+
+      // Padding pro graf
+      const padding = 5;
+      const graphWidth = width - padding * 2;
+      const graphHeight = height - padding * 2;
+
+      // Vytvoření SVG path
+      const points = dataPoints.map((point, index) => {
+        const x = padding + (index / (dataPoints.length - 1)) * graphWidth;
+        const y = padding + graphHeight - ((point[1] - minValue) / range) * graphHeight;
+        return `${x},${y}`;
+      });
+
+      const pathData = graphType === 'line' || graphType === 'area'
+        ? `M ${points.join(' L ')}`
+        : this._createBarPath(dataPoints, minValue, range, padding, graphWidth, graphHeight);
+
+      // Pro area graf přidáme fill path
+      let fillPath = '';
+      if (fill && graphType === 'area') {
+        const firstPoint = points[0].split(',');
+        const lastPoint = points[points.length - 1].split(',');
+        fillPath = `${pathData} L ${lastPoint[0]},${height - padding} L ${firstPoint[0]},${height - padding} Z`;
+      }
+
+      // Aktualizujeme DOM element s grafem
+      requestAnimationFrame(() => {
+        const graphContainer = this.shadowRoot?.querySelector(
+          `[data-entity-id="${entity.entity_id}"] .detailed-graph svg`
+        );
+        if (graphContainer) {
+          graphContainer.innerHTML = `
+            ${fill && fillPath ? `<path d="${fillPath}" fill="${lineColor}" opacity="0.2"/>` : ''}
+            <path d="${pathData}" stroke="${lineColor}" stroke-width="2" fill="${fill && !fillPath ? lineColor : 'none'}" opacity="${fill && !fillPath ? '0.3' : '1'}"/>
+          `;
+        }
+      });
+    });
+
+    // Vrátíme placeholder SVG, který bude aktualizován
+    return html`
+      <svg width="${width}" height="${height}" style="display: block;">
+        <text x="${width / 2}" y="${height / 2}" text-anchor="middle" fill="var(--secondary-text-color)" font-size="12">
+          Načítání...
+        </text>
+      </svg>
+    `;
+  }
+
+  private _createBarPath(dataPoints: number[][], minValue: number, range: number, padding: number, width: number, height: number): string {
+    const barWidth = width / dataPoints.length;
+    const bars = dataPoints.map((point, index) => {
+      const x = padding + index * barWidth;
+      const barHeight = ((point[1] - minValue) / range) * height;
+      const y = padding + height - barHeight;
+      return `M ${x},${y} L ${x},${padding + height} L ${x + barWidth * 0.8},${padding + height} L ${x + barWidth * 0.8},${y} Z`;
+    });
+    return bars.join(' ');
   }
 
   private _handleEntityClick(entity: ProcessedEntity) {
@@ -570,423 +697,7 @@ class EntityDisplayCard extends LitElement {
     `;
   }
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-
-    ha-card {
-      padding: 16px;
-    }
-
-    .card-header {
-      font-size: 24px;
-      font-weight: 500;
-      padding-bottom: 16px;
-      color: var(--primary-text-color);
-    }
-
-    .card-content {
-      padding: 0;
-    }
-
-    .group-header {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--secondary-text-color);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin: 16px 0 8px 0;
-      padding-bottom: 4px;
-      border-bottom: 2px solid var(--divider-color);
-    }
-
-    .group-header:first-child {
-      margin-top: 0;
-    }
-
-    /* List Layout */
-    .list-container {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    .entity-row {
-      display: flex;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--divider-color);
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .entity-row:hover {
-      background-color: var(--secondary-background-color);
-    }
-
-    .entity-row:last-child {
-      border-bottom: none;
-    }
-
-    .entity-row.warning {
-      background-color: var(--error-color, #f44336)10;
-    }
-
-    .entity-icon {
-      width: 40px;
-      height: 40px;
-      margin-right: 12px;
-      --mdc-icon-size: 24px;
-    }
-
-    .entity-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .entity-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--primary-text-color);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .entity-secondary {
-      font-size: 12px;
-      color: var(--secondary-text-color);
-      margin-top: 2px;
-    }
-
-    .entity-state {
-      display: flex;
-      align-items: baseline;
-      gap: 4px;
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--primary-text-color);
-      white-space: nowrap;
-    }
-
-    .state-unit {
-      font-size: 12px;
-      color: var(--secondary-text-color);
-      font-weight: 400;
-    }
-
-    /* Grid Layout */
-    .grid-container {
-      display: grid;
-      grid-template-columns: repeat(var(--columns, 2), 1fr);
-      gap: 12px;
-    }
-
-    .grid-item {
-      display: flex;
-      flex-direction: column;
-      padding: 16px;
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .grid-item:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .grid-item.warning {
-      border-color: var(--error-color, #f44336);
-    }
-
-    .grid-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 12px;
-      --mdc-icon-size: 28px;
-    }
-
-    .grid-content {
-      flex: 1;
-    }
-
-    .grid-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--primary-text-color);
-      margin-bottom: 4px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .grid-state {
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--primary-text-color);
-    }
-
-    .grid-state .state-unit {
-      font-size: 14px;
-    }
-
-    /* Gauge Layout */
-    .gauge-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .gauge-item {
-      padding: 12px;
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .gauge-item:hover {
-      background: var(--secondary-background-color);
-    }
-
-    .gauge-item.warning {
-      border-color: var(--error-color, #f44336);
-    }
-
-    .gauge-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .gauge-icon {
-      --mdc-icon-size: 20px;
-      color: var(--secondary-text-color);
-    }
-
-    .gauge-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--primary-text-color);
-    }
-
-    .gauge-bar-container {
-      height: 8px;
-      background: var(--divider-color);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 4px;
-    }
-
-    .gauge-bar {
-      height: 100%;
-      transition: width 0.3s ease;
-      border-radius: 4px;
-    }
-
-    .gauge-value {
-      text-align: right;
-      font-size: 12px;
-      color: var(--secondary-text-color);
-    }
-
-    /* Compact Layout */
-    .compact-container {
-      display: grid;
-      grid-template-columns: repeat(var(--columns, 3), 1fr);
-      gap: 8px;
-    }
-
-    .compact-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px;
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      font-size: 13px;
-    }
-
-    .compact-item:hover {
-      background: var(--secondary-background-color);
-    }
-
-    .compact-item.warning {
-      background: var(--error-color, #f44336)10;
-    }
-
-    .compact-item ha-icon {
-      --mdc-icon-size: 18px;
-    }
-
-    .compact-value {
-      font-weight: 600;
-      color: var(--primary-text-color);
-    }
-
-    .compact-unit {
-      font-size: 11px;
-      color: var(--secondary-text-color);
-    }
-
-    /* Detailed Layout */
-    .detailed-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .detailed-item {
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .detailed-item:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .detailed-item.warning {
-      border-color: var(--error-color, #f44336);
-    }
-
-    .detailed-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 16px;
-    }
-
-    .detailed-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      --mdc-icon-size: 32px;
-    }
-
-    .detailed-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .detailed-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--primary-text-color);
-      margin-bottom: 4px;
-    }
-
-    .detailed-meta {
-      display: flex;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--secondary-text-color);
-    }
-
-    .meta-area {
-      padding: 2px 8px;
-      background: var(--secondary-background-color);
-      border-radius: 4px;
-    }
-
-    .meta-label {
-      padding: 2px 8px;
-      background: var(--primary-color)20;
-      color: var(--primary-color);
-      border-radius: 4px;
-      font-weight: 500;
-    }
-
-    .detailed-state {
-      text-align: right;
-    }
-
-    .detailed-state .state-value {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--primary-text-color);
-      line-height: 1;
-    }
-
-    .detailed-state .state-unit {
-      font-size: 14px;
-      color: var(--secondary-text-color);
-      font-weight: 400;
-      margin-top: 2px;
-    }
-
-    .detailed-graph {
-      padding: 0 16px 16px;
-    }
-
-    .graph-placeholder {
-      height: 80px;
-      background: var(--secondary-background-color);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--secondary-text-color);
-      font-size: 12px;
-    }
-
-    .detailed-footer {
-      padding: 12px 16px;
-      background: var(--secondary-background-color);
-      font-size: 12px;
-      color: var(--secondary-text-color);
-      border-top: 1px solid var(--divider-color);
-    }
-
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 48px 16px;
-      color: var(--secondary-text-color);
-    }
-
-    .empty-state ha-icon {
-      --mdc-icon-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.5;
-    }
-
-    .empty-state p {
-      margin: 0;
-      font-size: 14px;
-    }
-
-    /* Responsive */
-    @media (max-width: 600px) {
-      .grid-container {
-        grid-template-columns: 1fr;
-      }
-
-      .compact-container {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-  `;
+  static styles = modernStyles;
 
   getCardSize() {
     const entityCount = this._entities.length;

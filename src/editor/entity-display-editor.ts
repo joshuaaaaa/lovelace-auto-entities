@@ -221,6 +221,71 @@ class EntityDisplayEditor extends LitElement {
             <mwc-list-item value="area">Oblast</mwc-list-item>
           </ha-select>
         </div>
+
+        <div class="editor-row checkbox-row">
+          <ha-formfield label="Obrátit pořadí (sestupně)">
+            <ha-checkbox
+              .checked=${this._config.sort_reverse === true}
+              .configValue=${'sort_reverse'}
+              @change=${this._valueChanged}
+            ></ha-checkbox>
+          </ha-formfield>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <div class="section-header">Grafy</div>
+        <p class="section-description">
+          Konfigurace grafů pro detailed layout
+        </p>
+
+        <div class="editor-row">
+          <ha-select
+            label="Typ grafu"
+            .configValue=${'graph_type'}
+            .value=${this._config.graph_type || 'line'}
+            @selected=${this._valueChanged}
+            @closed=${(ev) => ev.stopPropagation()}
+          >
+            <mwc-list-item value="line">Čára</mwc-list-item>
+            <mwc-list-item value="area">Oblast</mwc-list-item>
+            <mwc-list-item value="bar">Sloupcový</mwc-list-item>
+          </ha-select>
+        </div>
+
+        <div class="editor-row">
+          <ha-textfield
+            label="Počet hodin historie"
+            type="number"
+            min="1"
+            max="168"
+            .configValue=${'graph_hours'}
+            .value=${this._config.graph_hours || 24}
+            @change=${this._valueChanged}
+          ></ha-textfield>
+        </div>
+
+        <div class="editor-row">
+          <ha-textfield
+            label="Výška grafu (px)"
+            type="number"
+            min="50"
+            max="300"
+            .configValue=${'graph_height'}
+            .value=${this._config.graph_height || 100}
+            @change=${this._valueChanged}
+          ></ha-textfield>
+        </div>
+
+        <div class="editor-row checkbox-row">
+          <ha-formfield label="Vyplnit oblast pod grafem">
+            <ha-checkbox
+              .checked=${this._config.graph_fill !== false}
+              .configValue=${'graph_fill'}
+              @change=${this._valueChanged}
+            ></ha-checkbox>
+          </ha-formfield>
+        </div>
       </div>
 
       <div class="editor-section">
