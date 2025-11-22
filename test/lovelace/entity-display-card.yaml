@@ -1,0 +1,174 @@
+# Příklady použití Entity Display Card
+
+# 1. Základní seznam teplot
+- type: custom:entity-display-card
+  title: "Teploty v domě"
+  layout: list
+  filter:
+    device_class:
+      - temperature
+
+# 2. Mřížka s teplotou a vlhkostí
+- type: custom:entity-display-card
+  title: "Klima - Grid Layout"
+  layout: grid
+  columns: 2
+  group_by: area
+  filter:
+    device_class:
+      - temperature
+      - humidity
+
+# 3. Ukazatele pro různé senzory
+- type: custom:entity-display-card
+  title: "Přehled senzorů - Gauge"
+  layout: gauge
+  filter:
+    device_class:
+      - temperature
+      - humidity
+      - battery
+  sort_by: state
+
+# 4. Kompaktní zobrazení
+- type: custom:entity-display-card
+  title: "Quick Stats"
+  layout: compact
+  columns: 3
+  show_name: false
+  show_header: true
+  filter:
+    device_class:
+      - temperature
+      - humidity
+      - battery
+
+# 5. Podrobné zobrazení s grafy
+- type: custom:entity-display-card
+  title: "Podrobný přehled klimatu"
+  layout: detailed
+  show_graph: true
+  show_last_changed: true
+  group_by: area
+  filter:
+    device_class:
+      - temperature
+      - humidity
+      - carbon_dioxide
+      - volatile_organic_compounds
+
+# 6. Baterie seřazené podle úrovně (nejnižší první)
+- type: custom:entity-display-card
+  title: "⚠️ Baterie k výměně"
+  layout: list
+  filter:
+    device_class:
+      - battery
+  sort_by: state
+
+# 7. Monitoring energie
+- type: custom:entity-display-card
+  title: "⚡ Spotřeba energie"
+  layout: gauge
+  group_by: type
+  filter:
+    device_class:
+      - power
+      - energy
+
+# 8. Kvalita vzduchu
+- type: custom:entity-display-card
+  title: "🌬️ Kvalita vzduchu"
+  layout: detailed
+  show_graph: true
+  group_by: area
+  filter:
+    device_class:
+      - carbon_dioxide
+      - volatile_organic_compounds
+      - pm25
+
+# 9. Všechny typy atmosférických senzorů
+- type: custom:entity-display-card
+  title: "Atmosférické podmínky"
+  layout: grid
+  columns: 3
+  group_by: type
+  filter:
+    device_class:
+      - temperature
+      - humidity
+      - pressure
+      - illuminance
+
+# 10. Manuálně vybrané entity
+- type: custom:entity-display-card
+  title: "Vybrané senzory"
+  layout: list
+  show_last_changed: true
+  entities:
+    - sensor.living_room_temperature
+    - sensor.bedroom_temperature
+    - sensor.kitchen_humidity
+    - sensor.bathroom_humidity
+
+# 11. Kombinace manuálních entit a filtrů
+- type: custom:entity-display-card
+  title: "Důležité senzory + Baterie"
+  layout: detailed
+  entities:
+    - sensor.main_temperature
+    - sensor.main_humidity
+  filter:
+    device_class:
+      - battery
+
+# 12. Minimalistický přehled bez hlavičky
+- type: custom:entity-display-card
+  layout: compact
+  columns: 4
+  show_header: false
+  show_name: false
+  show_unit: true
+  filter:
+    device_class:
+      - temperature
+
+# 13. Seskupení podle patra
+- type: custom:entity-display-card
+  title: "Teploty podle pater"
+  layout: grid
+  columns: 2
+  group_by: floor
+  filter:
+    device_class:
+      - temperature
+
+# 14. Všechny podporované typy najednou
+- type: custom:entity-display-card
+  title: "Všechny senzory"
+  layout: detailed
+  group_by: type
+  show_graph: true
+  filter:
+    device_class:
+      - temperature
+      - humidity
+      - battery
+      - pressure
+      - illuminance
+      - power
+      - energy
+      - carbon_dioxide
+      - volatile_organic_compounds
+      - pm25
+      - signal_strength
+
+# 15. Síla signálu zařízení
+- type: custom:entity-display-card
+  title: "📶 Síla WiFi signálu"
+  layout: gauge
+  filter:
+    device_class:
+      - signal_strength
+  sort_by: state

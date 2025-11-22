@@ -6,17 +6,31 @@ import { getBabelOutputPlugin } from "@rollup/plugin-babel";
 
 const dev = process.env.ROLLUP_WATCH;
 
-export default {
-  input: "src/main.ts",
-  output: {
-    file: "auto-entities.js",
-    format: "es",
+const basePlugins = [
+  nodeResolve(),
+  json(),
+  typescript(),
+  getBabelOutputPlugin({ presets: ["@babel/preset-env"] }),
+  !dev && terser({ format: { comments: false } }),
+];
+
+export default [
+  // Auto Entities (původní karta)
+  {
+    input: "src/main.ts",
+    output: {
+      file: "auto-entities.js",
+      format: "es",
+    },
+    plugins: basePlugins,
   },
-  plugins: [
-    nodeResolve(),
-    json(),
-    typescript(),
-    getBabelOutputPlugin({ presets: ["@babel/preset-env"] }),
-    !dev && terser({ format: { comments: false } }),
-  ],
-};
+  // Entity Display Card (nová karta)
+  {
+    input: "src/entity-display-card.ts",
+    output: {
+      file: "entity-display-card.js",
+      format: "es",
+    },
+    plugins: basePlugins,
+  },
+];
