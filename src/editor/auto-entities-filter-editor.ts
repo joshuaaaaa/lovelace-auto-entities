@@ -11,6 +11,7 @@ import {
   hasSelector,
   templateSchema,
   entitiesSchema,
+  excludeEntitiesSchema,
 } from "./schema";
 
 class AutoEntitiesFilterEditor extends LitElement {
@@ -131,6 +132,17 @@ class AutoEntitiesFilterEditor extends LitElement {
     const entities = ev.detail.value.entities;
 
     this._config = { ...this._config, entities };
+
+    this.dispatchEvent(
+      new CustomEvent("config-changed", { detail: { config: this._config } })
+    );
+  }
+
+  _excludeEntitiesChanged(ev) {
+    ev.stopPropagation();
+    const exclude_entities = ev.detail.value.exclude_entities;
+
+    this._config = { ...this._config, exclude_entities };
 
     this.dispatchEvent(
       new CustomEvent("config-changed", { detail: { config: this._config } })
@@ -278,6 +290,14 @@ class AutoEntitiesFilterEditor extends LitElement {
           <h3 slot="header">Exclude</h3>
           <div class="content">${render_type("exclude")}</div>
         </ha-expansion-panel>
+        <ha-form
+          .hass=${this.hass}
+          .schema=${excludeEntitiesSchema}
+          .data=${this._config}
+          .computeLabel=${(s) => s.label ?? s.name}
+          @value-changed=${(ev) => this._excludeEntitiesChanged(ev)}
+        >
+        </ha-form>
         ${this._config.entities
           ? html`
               <ha-form

@@ -260,6 +260,12 @@ class AutoEntities extends LitElement {
     // Exclude
     entities = entities.filter((e) => !exclude_filters.some((f) => f(e)));
 
+    // Exclude specific entities
+    if (this._config.exclude_entities) {
+      const excludeSet = new Set(this._config.exclude_entities);
+      entities = entities.filter((e) => !excludeSet.has(e.entity));
+    }
+
     // Global sort
     const sorter = this._config.sort?.method
       ? await get_sorter(this.hass, this._config.sort)
