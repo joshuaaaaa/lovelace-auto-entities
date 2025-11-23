@@ -70,6 +70,7 @@ class EntityDisplayCard extends LitElement {
     if (!this.hass || !this._config) return;
 
     const entities: ProcessedEntity[] = [];
+    const invalidStates = ['unknown', 'none', 'unavailable', 'null', 'undefined'];
 
     // Získání entit ze konfigurace
     const entityIds = this._getEntityIds();
@@ -77,6 +78,14 @@ class EntityDisplayCard extends LitElement {
     for (const entityId of entityIds) {
       const stateObj = this.hass.states[entityId];
       if (!stateObj) continue;
+
+      // Filtrování neplatných stavů pokud je zapnuto
+      if (this._config.ignore_invalid) {
+        const state = String(stateObj.state).toLowerCase();
+        if (invalidStates.includes(state)) {
+          continue;
+        }
+      }
 
       const processed = this._processEntity(entityId, stateObj);
       if (processed) {

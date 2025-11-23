@@ -231,6 +231,16 @@ class EntityDisplayEditor extends LitElement {
             ></ha-checkbox>
           </ha-formfield>
         </div>
+
+        <div class="editor-row checkbox-row">
+          <ha-formfield label="Ignorovat neplatné stavy (unknown, unavailable)">
+            <ha-checkbox
+              .checked=${this._config.ignore_invalid === true}
+              .configValue=${'ignore_invalid'}
+              @change=${this._valueChanged}
+            ></ha-checkbox>
+          </ha-formfield>
+        </div>
       </div>
 
       <div class="editor-section">
