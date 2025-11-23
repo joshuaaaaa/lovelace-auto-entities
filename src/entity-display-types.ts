@@ -18,6 +18,7 @@ export interface EntityDisplayConfig {
   sort_by?: 'name' | 'state' | 'last_changed' | 'area';
   sort_reverse?: boolean;
   ignore_invalid?: boolean;
+  max_entities?: number;  // Limit počtu zobrazených entit
   entity_types?: EntityTypeConfig[];
   theme?: 'default' | 'modern' | 'minimal';
   card_mod?: any;

@@ -70,7 +70,7 @@ class EntityDisplayCard extends LitElement {
   private _updateEntities() {
     if (!this.hass || !this._config) return;
 
-    const entities: ProcessedEntity[] = [];
+    let entities: ProcessedEntity[] = [];
     const invalidStates = ['unknown', 'none', 'unavailable', 'null', 'undefined', 'normal'];
 
     // Získání entit ze konfigurace
@@ -99,6 +99,14 @@ class EntityDisplayCard extends LitElement {
       if (processed) {
         entities.push(processed);
       }
+    }
+
+    // Seřazení entit
+    entities = this._sortEntities(entities);
+
+    // Limitování počtu zobrazených entit
+    if (this._config.max_entities && this._config.max_entities > 0) {
+      entities = entities.slice(0, this._config.max_entities);
     }
 
     this._entities = entities;
@@ -537,15 +545,11 @@ class EntityDisplayCard extends LitElement {
       // Používáme REST API endpoint jako mini-graph-card
       const url = `history/period/${startTime.toISOString()}?filter_entity_id=${entityId}&end_time=${endTime.toISOString()}&minimal_response&no_attributes&significant_changes_only=0`;
 
-      console.log(`Fetching history for ${entityId} from ${url}`);
       const history = await this.hass.callApi('GET', url);
 
       if (!history || !history[0] || history[0].length === 0) {
-        console.warn(`No history data for ${entityId}`);
         return [];
       }
-
-      console.log(`Received ${history[0].length} history points for ${entityId}`);
 
       // Zpracování dat - [timestamp, value]
       const dataPoints: number[][] = [];
@@ -573,11 +577,8 @@ class EntityDisplayCard extends LitElement {
       }
 
       if (dataPoints.length === 0) {
-        console.warn(`No valid numeric data points for ${entityId}`);
         return [];
       }
-
-      console.log(`Processed ${dataPoints.length} valid data points for ${entityId}`);
 
       // Agregace dat pokud je jich příliš mnoho (max 100 bodů)
       if (dataPoints.length > 100) {
@@ -616,13 +617,7 @@ class EntityDisplayCard extends LitElement {
 
     // Načteme historii asynchronně
     this._fetchHistory(entity.entity_id, graphHours).then((dataPoints) => {
-      if (dataPoints.length === 0) {
-        console.warn(`No data points to render for ${entity.entity_id}`);
-        return;
-      }
-
-      if (dataPoints.length < 2) {
-        console.warn(`Not enough data points (${dataPoints.length}) for ${entity.entity_id}`);
+      if (dataPoints.length === 0 || dataPoints.length < 2) {
         return;
       }
 
@@ -631,14 +626,6 @@ class EntityDisplayCard extends LitElement {
       const minValue = Math.min(...values);
       const maxValue = Math.max(...values);
       const range = maxValue - minValue || 1;
-
-      // Debug: vypíšeme min/max a pár sample hodnot
-      const currentValue = parseFloat(String(entity.state));
-      console.log(`Graph for ${entity.entity_id}:`);
-      console.log(`  Current value: ${currentValue.toFixed(2)}`);
-      console.log(`  Min: ${minValue.toFixed(2)}, Max: ${maxValue.toFixed(2)}, Range: ${range.toFixed(2)}`);
-      console.log(`  First 5 values:`, values.slice(0, 5).map(v => v.toFixed(2)));
-      console.log(`  Last 5 values:`, values.slice(-5).map(v => v.toFixed(2)));
 
       // Padding pro graf
       const padding = 10;
@@ -677,11 +664,8 @@ class EntityDisplayCard extends LitElement {
         );
 
         if (!graphContainer) {
-          console.error(`Graph container not found for ${entity.entity_id}`);
           return;
         }
-
-        console.log(`Updating graph for ${entity.entity_id} with ${dataPoints.length} points`);
 
         const gridLines = this._createGridLines(width, height, padding, minValue, maxValue);
         const gradientId = entity.entity_id.replace(/[.:]/g, '_');
