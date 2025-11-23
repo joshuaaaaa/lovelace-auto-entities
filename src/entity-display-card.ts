@@ -9,6 +9,7 @@ import {
   EntityTypeConfig,
 } from './entity-display-types';
 import { modernStyles } from './entity-display-modern-styles.css';
+import { localize, getLanguage } from './localize';
 import './editor/entity-display-editor';
 
 class EntityDisplayCard extends LitElement {
@@ -484,7 +485,7 @@ class EntityDisplayCard extends LitElement {
             </div>`
           : ''}
         <div class="detailed-footer">
-          <span>Naposledy změněno: ${this._formatLastChanged(entity.last_changed)}</span>
+          <span>${localize('time_last_changed', getLanguage(this.hass))}: ${this._formatLastChanged(entity.last_changed)}</span>
         </div>
       </div>
     `;
@@ -510,10 +511,13 @@ class EntityDisplayCard extends LitElement {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `před ${days}d`;
-    if (hours > 0) return `před ${hours}h`;
-    if (minutes > 0) return `před ${minutes}m`;
-    return 'právě teď';
+    const lang = getLanguage(this.hass);
+    const timeAgo = localize('time_minutes_ago', lang);
+
+    if (days > 0) return `${timeAgo} ${days}d`;
+    if (hours > 0) return `${timeAgo} ${hours}h`;
+    if (minutes > 0) return `${timeAgo} ${minutes}m`;
+    return localize('time_now', lang);
   }
 
   private async _fetchHistory(entityId: string, hours: number = 24): Promise<number[][]> {
@@ -611,7 +615,7 @@ class EntityDisplayCard extends LitElement {
     return html`
       <svg width="${width}" height="${height}" style="display: block;">
         <text x="${width / 2}" y="${height / 2}" text-anchor="middle" fill="var(--secondary-text-color)" font-size="12">
-          Načítání...
+          ${localize('loading', getLanguage(this.hass))}
         </text>
       </svg>
     `;
@@ -638,23 +642,29 @@ class EntityDisplayCard extends LitElement {
   }
 
   private _getGroupTitle(key: string): string {
-    // Překladové mapování pro device classes
-    const translations: Record<string, string> = {
-      temperature: 'Teplota',
-      humidity: 'Vlhkost',
-      battery: 'Baterie',
-      pressure: 'Tlak',
-      illuminance: 'Osvětlení',
-      power: 'Výkon',
-      energy: 'Energie',
-      carbon_dioxide: 'CO₂',
-      volatile_organic_compounds: 'VOC',
-      pm25: 'PM2.5',
-      signal_strength: 'Signál',
-      unknown: 'Ostatní',
+    const lang = getLanguage(this.hass);
+
+    // Map device class keys to localization keys
+    const deviceClassMap: Record<string, keyof import('./localize').Translations> = {
+      temperature: 'device_temperature',
+      humidity: 'device_humidity',
+      battery: 'device_battery',
+      pressure: 'device_pressure',
+      illuminance: 'device_illuminance',
+      power: 'device_power',
+      energy: 'device_energy',
+      carbon_dioxide: 'device_carbon_dioxide',
+      volatile_organic_compounds: 'device_volatile_organic_compounds',
+      pm25: 'device_pm25',
+      signal_strength: 'device_signal_strength',
+      unknown: 'device_other',
+      'Bez oblasti': 'group_no_area',
+      'Bez patra': 'group_no_floor',
+      'Všechny': 'group_all',
     };
 
-    return translations[key] || key;
+    const locKey = deviceClassMap[key];
+    return locKey ? localize(locKey, lang) : key;
   }
 
   render() {
@@ -662,9 +672,12 @@ class EntityDisplayCard extends LitElement {
       return html``;
     }
 
+    const lang = getLanguage(this.hass);
+    const allKey = localize('group_all', lang);
+
     const entities = this._config.group_by && this._config.group_by !== 'none'
       ? this._groupedEntities
-      : { Všechny: this._entities };
+      : { [allKey]: this._entities };
 
     const isEmpty = Object.keys(entities).length === 0 ||
                     Object.values(entities).every(group => group.length === 0);
@@ -674,7 +687,7 @@ class EntityDisplayCard extends LitElement {
         <ha-card>
           <div class="empty-state">
             <ha-icon icon="mdi:information-outline"></ha-icon>
-            <p>Žádné entity k zobrazení</p>
+            <p>${localize('empty_no_entities', lang)}</p>
           </div>
         </ha-card>
       `;

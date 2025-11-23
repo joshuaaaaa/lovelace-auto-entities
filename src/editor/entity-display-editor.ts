@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { EntityDisplayConfig, DEFAULT_ENTITY_TYPES } from '../entity-display-types';
+import { localize, getLanguage } from '../localize';
 
 class EntityDisplayEditor extends LitElement {
   @property() public hass: any;
@@ -149,11 +150,13 @@ class EntityDisplayEditor extends LitElement {
   }
 
   private _renderGeneralTab() {
+    const lang = getLanguage(this.hass);
+
     return html`
       <div class="editor-section">
         <div class="editor-row">
           <ha-textfield
-            label="Název karty"
+            label="${localize('editor_title', lang)}"
             .configValue=${'title'}
             .value=${this._config.title || ''}
             @change=${this._valueChanged}
@@ -162,17 +165,17 @@ class EntityDisplayEditor extends LitElement {
 
         <div class="editor-row">
           <ha-select
-            label="Rozložení"
+            label="${localize('editor_layout', lang)}"
             .configValue=${'layout'}
             .value=${this._config.layout || 'list'}
             @selected=${this._valueChanged}
             @closed=${(ev) => ev.stopPropagation()}
           >
-            <mwc-list-item value="list">Seznam</mwc-list-item>
-            <mwc-list-item value="grid">Mřížka</mwc-list-item>
-            <mwc-list-item value="gauge">Ukazatel</mwc-list-item>
-            <mwc-list-item value="compact">Kompaktní</mwc-list-item>
-            <mwc-list-item value="detailed">Podrobné</mwc-list-item>
+            <mwc-list-item value="list">${localize('layout_list', lang)}</mwc-list-item>
+            <mwc-list-item value="grid">${localize('layout_grid', lang)}</mwc-list-item>
+            <mwc-list-item value="gauge">${localize('layout_gauge', lang)}</mwc-list-item>
+            <mwc-list-item value="compact">${localize('layout_compact', lang)}</mwc-list-item>
+            <mwc-list-item value="detailed">${localize('layout_detailed', lang)}</mwc-list-item>
           </ha-select>
         </div>
 
@@ -180,7 +183,7 @@ class EntityDisplayEditor extends LitElement {
           ? html`
               <div class="editor-row">
                 <ha-textfield
-                  label="Počet sloupců"
+                  label="${localize('editor_columns', lang)}"
                   type="number"
                   min="1"
                   max="6"
@@ -194,36 +197,36 @@ class EntityDisplayEditor extends LitElement {
 
         <div class="editor-row">
           <ha-select
-            label="Seskupit podle"
+            label="${localize('editor_group_by', lang)}"
             .configValue=${'group_by'}
             .value=${this._config.group_by || 'none'}
             @selected=${this._valueChanged}
             @closed=${(ev) => ev.stopPropagation()}
           >
-            <mwc-list-item value="none">Neseskupovat</mwc-list-item>
-            <mwc-list-item value="type">Typ</mwc-list-item>
-            <mwc-list-item value="area">Oblast</mwc-list-item>
-            <mwc-list-item value="floor">Patro</mwc-list-item>
+            <mwc-list-item value="none">${localize('group_none', lang)}</mwc-list-item>
+            <mwc-list-item value="type">${localize('group_type', lang)}</mwc-list-item>
+            <mwc-list-item value="area">${localize('group_area', lang)}</mwc-list-item>
+            <mwc-list-item value="floor">${localize('group_floor', lang)}</mwc-list-item>
           </ha-select>
         </div>
 
         <div class="editor-row">
           <ha-select
-            label="Řadit podle"
+            label="${localize('editor_sort_by', lang)}"
             .configValue=${'sort_by'}
             .value=${this._config.sort_by || 'name'}
             @selected=${this._valueChanged}
             @closed=${(ev) => ev.stopPropagation()}
           >
-            <mwc-list-item value="name">Název</mwc-list-item>
-            <mwc-list-item value="state">Stav</mwc-list-item>
-            <mwc-list-item value="last_changed">Poslední změna</mwc-list-item>
-            <mwc-list-item value="area">Oblast</mwc-list-item>
+            <mwc-list-item value="name">${localize('sort_name', lang)}</mwc-list-item>
+            <mwc-list-item value="state">${localize('sort_state', lang)}</mwc-list-item>
+            <mwc-list-item value="last_changed">${localize('sort_last_changed', lang)}</mwc-list-item>
+            <mwc-list-item value="area">${localize('sort_area', lang)}</mwc-list-item>
           </ha-select>
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Obrátit pořadí (sestupně)">
+          <ha-formfield label="${localize('editor_sort_reverse', lang)}">
             <ha-checkbox
               .checked=${this._config.sort_reverse === true}
               .configValue=${'sort_reverse'}
@@ -233,7 +236,7 @@ class EntityDisplayEditor extends LitElement {
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Ignorovat neplatné stavy (unknown, unavailable)">
+          <ha-formfield label="${localize('editor_ignore_invalid', lang)}">
             <ha-checkbox
               .checked=${this._config.ignore_invalid === true}
               .configValue=${'ignore_invalid'}
@@ -244,28 +247,28 @@ class EntityDisplayEditor extends LitElement {
       </div>
 
       <div class="editor-section">
-        <div class="section-header">Grafy</div>
+        <div class="section-header">${localize('editor_section_graphs', lang)}</div>
         <p class="section-description">
-          Konfigurace grafů pro detailed layout
+          ${localize('editor_section_graphs_desc', lang)}
         </p>
 
         <div class="editor-row">
           <ha-select
-            label="Typ grafu"
+            label="${localize('editor_graph_type', lang)}"
             .configValue=${'graph_type'}
             .value=${this._config.graph_type || 'line'}
             @selected=${this._valueChanged}
             @closed=${(ev) => ev.stopPropagation()}
           >
-            <mwc-list-item value="line">Čára</mwc-list-item>
-            <mwc-list-item value="area">Oblast</mwc-list-item>
-            <mwc-list-item value="bar">Sloupcový</mwc-list-item>
+            <mwc-list-item value="line">${localize('graph_line', lang)}</mwc-list-item>
+            <mwc-list-item value="area">${localize('graph_area', lang)}</mwc-list-item>
+            <mwc-list-item value="bar">${localize('graph_bar', lang)}</mwc-list-item>
           </ha-select>
         </div>
 
         <div class="editor-row">
           <ha-textfield
-            label="Počet hodin historie"
+            label="${localize('editor_graph_hours', lang)}"
             type="number"
             min="1"
             max="168"
@@ -277,7 +280,7 @@ class EntityDisplayEditor extends LitElement {
 
         <div class="editor-row">
           <ha-textfield
-            label="Výška grafu (px)"
+            label="${localize('editor_graph_height', lang)}"
             type="number"
             min="50"
             max="300"
@@ -288,7 +291,7 @@ class EntityDisplayEditor extends LitElement {
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Vyplnit oblast pod grafem">
+          <ha-formfield label="${localize('editor_graph_fill', lang)}">
             <ha-checkbox
               .checked=${this._config.graph_fill !== false}
               .configValue=${'graph_fill'}
@@ -299,10 +302,10 @@ class EntityDisplayEditor extends LitElement {
       </div>
 
       <div class="editor-section">
-        <div class="section-header">Zobrazení</div>
+        <div class="section-header">${localize('editor_section_display', lang)}</div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Zobrazit hlavičku">
+          <ha-formfield label="${localize('editor_show_header', lang)}">
             <ha-checkbox
               .checked=${this._config.show_header !== false}
               .configValue=${'show_header'}
@@ -312,7 +315,7 @@ class EntityDisplayEditor extends LitElement {
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Zobrazit ikony">
+          <ha-formfield label="${localize('editor_show_icon', lang)}">
             <ha-checkbox
               .checked=${this._config.show_icon !== false}
               .configValue=${'show_icon'}
@@ -322,7 +325,7 @@ class EntityDisplayEditor extends LitElement {
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Zobrazit názvy">
+          <ha-formfield label="${localize('editor_show_name', lang)}">
             <ha-checkbox
               .checked=${this._config.show_name !== false}
               .configValue=${'show_name'}
@@ -332,7 +335,7 @@ class EntityDisplayEditor extends LitElement {
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Zobrazit stavy">
+          <ha-formfield label="${localize('editor_show_state', lang)}">
             <ha-checkbox
               .checked=${this._config.show_state !== false}
               .configValue=${'show_state'}
@@ -342,7 +345,7 @@ class EntityDisplayEditor extends LitElement {
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Zobrazit jednotky">
+          <ha-formfield label="${localize('editor_show_unit', lang)}">
             <ha-checkbox
               .checked=${this._config.show_unit !== false}
               .configValue=${'show_unit'}
@@ -352,7 +355,7 @@ class EntityDisplayEditor extends LitElement {
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Zobrazit poslední změnu">
+          <ha-formfield label="${localize('editor_show_last_changed', lang)}">
             <ha-checkbox
               .checked=${this._config.show_last_changed === true}
               .configValue=${'show_last_changed'}
@@ -362,7 +365,7 @@ class EntityDisplayEditor extends LitElement {
         </div>
 
         <div class="editor-row checkbox-row">
-          <ha-formfield label="Zobrazit grafy (kde podporováno)">
+          <ha-formfield label="${localize('editor_show_graph', lang)}">
             <ha-checkbox
               .checked=${this._config.show_graph === true}
               .configValue=${'show_graph'}
@@ -376,12 +379,13 @@ class EntityDisplayEditor extends LitElement {
 
   private _renderEntitiesTab() {
     const entities = this._config.entities || [];
+    const lang = getLanguage(this.hass);
 
     return html`
       <div class="editor-section">
-        <div class="section-header">Manuální entity</div>
+        <div class="section-header">${localize('editor_manual_entities', lang)}</div>
         <p class="section-description">
-          Zadejte konkrétní entity, které chcete zobrazit
+          ${localize('editor_manual_entities_desc', lang)}
         </p>
 
         ${entities.map(
@@ -404,7 +408,7 @@ class EntityDisplayEditor extends LitElement {
 
         <mwc-button @click=${this._addEntity}>
           <ha-icon icon="mdi:plus"></ha-icon>
-          Přidat entitu
+          ${localize('editor_add_entity', lang)}
         </mwc-button>
       </div>
     `;
@@ -413,20 +417,21 @@ class EntityDisplayEditor extends LitElement {
   private _renderFiltersTab() {
     const deviceClasses = this._config.filter?.device_class || [];
     const domains = this._config.filter?.domain || [];
+    const lang = getLanguage(this.hass);
 
     return html`
       <div class="editor-section">
-        <div class="section-header">Filtry</div>
+        <div class="section-header">${localize('editor_filters', lang)}</div>
         <p class="section-description">
-          Automaticky vyberte entity podle kritérií
+          ${localize('editor_filters_desc', lang)}
         </p>
 
-        <div class="subsection-header">Device Class (typ senzoru)</div>
+        <div class="subsection-header">${localize('editor_device_class_label', lang)}</div>
         ${deviceClasses.map(
           (deviceClass, index) => html`
             <div class="editor-row entity-row">
               <ha-select
-                label="Device Class"
+                label="${localize('editor_device_class_label', lang)}"
                 .value=${deviceClass}
                 @selected=${(ev: any) =>
                   this._updateDeviceClass(index, ev.target.value)}
@@ -435,7 +440,7 @@ class EntityDisplayEditor extends LitElement {
                 ${Object.keys(DEFAULT_ENTITY_TYPES).map(
                   (key) => html`
                     <mwc-list-item value="${key}">
-                      ${this._getDeviceClassLabel(key)}
+                      ${this._getDeviceClassLabel(key, lang)}
                     </mwc-list-item>
                   `
                 )}
@@ -450,7 +455,7 @@ class EntityDisplayEditor extends LitElement {
 
         <mwc-button @click=${this._addDeviceClass}>
           <ha-icon icon="mdi:plus"></ha-icon>
-          Přidat Device Class
+          ${localize('editor_add_device_class', lang)}
         </mwc-button>
       </div>
 
@@ -458,8 +463,9 @@ class EntityDisplayEditor extends LitElement {
         <div class="info-box">
           <ha-icon icon="mdi:information-outline"></ha-icon>
           <div>
-            <strong>Tip:</strong> Device Class určuje typ senzoru (teplota, vlhkost atd.).
-            Pokud nevíte, jaký typ použít, podívejte se na atributy entity v Developer Tools.
+            <strong>${localize('editor_info_tip', lang)}:</strong> ${lang === 'cs'
+              ? 'Device Class určuje typ senzoru (teplota, vlhkost atd.). Pokud nevíte, jaký typ použít, podívejte se na atributy entity v Developer Tools.'
+              : 'Device Class determines the sensor type (temperature, humidity, etc.). If you\'re unsure which type to use, check the entity attributes in Developer Tools.'}
           </div>
         </div>
       </div>
@@ -467,11 +473,13 @@ class EntityDisplayEditor extends LitElement {
   }
 
   private _renderTypesTab() {
+    const lang = getLanguage(this.hass);
+
     return html`
       <div class="editor-section">
-        <div class="section-header">Podporované typy entit</div>
+        <div class="section-header">${localize('editor_supported_types', lang)}</div>
         <p class="section-description">
-          Karta automaticky rozpozná a správně zobrazí následující typy:
+          ${localize('editor_supported_types_desc', lang)}
         </p>
 
         <div class="types-grid">
@@ -480,13 +488,13 @@ class EntityDisplayEditor extends LitElement {
               <div class="type-card">
                 <div class="type-header">
                   <ha-icon .icon=${config.icon}></ha-icon>
-                  <span class="type-name">${this._getDeviceClassLabel(key)}</span>
+                  <span class="type-name">${this._getDeviceClassLabel(key, lang)}</span>
                 </div>
                 <div class="type-info">
                   <span class="type-unit">${config.unit || 'N/A'}</span>
                   ${config.ranges
                     ? html`
-                        <span class="type-ranges">${config.ranges.length} rozsahů</span>
+                        <span class="type-ranges">${config.ranges.length} ${lang === 'cs' ? 'rozsahů' : 'ranges'}</span>
                       `
                     : ''}
                 </div>
@@ -514,8 +522,9 @@ class EntityDisplayEditor extends LitElement {
         <div class="info-box success">
           <ha-icon icon="mdi:check-circle"></ha-icon>
           <div>
-            Všechny typy mají přednastavené <strong>barevné rozsahy</strong>,
-            <strong>ikony</strong> a <strong>varovné hodnoty</strong> pro optimální zobrazení.
+            ${lang === 'cs'
+              ? html`Všechny typy mají přednastavené <strong>barevné rozsahy</strong>, <strong>ikony</strong> a <strong>varovné hodnoty</strong> pro optimální zobrazení.`
+              : html`All types have predefined <strong>color ranges</strong>, <strong>icons</strong>, and <strong>warning values</strong> for optimal display.`}
           </div>
         </div>
       </div>
@@ -523,30 +532,24 @@ class EntityDisplayEditor extends LitElement {
   }
 
   private _renderExamplesTab() {
-    return html`
-      <div class="editor-section">
-        <div class="section-header">Příklady použití</div>
+    const lang = getLanguage(this.hass);
 
-        <div class="example-card">
-          <div class="example-header">
-            <ha-icon icon="mdi:thermometer"></ha-icon>
-            <span>Všechny teplotní senzory</span>
-          </div>
-          <pre><code>type: custom:entity-display-card
+    const examples = lang === 'cs' ? [
+      {
+        icon: 'mdi:thermometer',
+        title: 'Všechny teplotní senzory',
+        code: `type: custom:entity-display-card
 title: "Teploty v domě"
 layout: grid
 columns: 2
 filter:
   device_class:
-    - temperature</code></pre>
-        </div>
-
-        <div class="example-card">
-          <div class="example-header">
-            <ha-icon icon="mdi:water-percent"></ha-icon>
-            <span>Teplota a vlhkost</span>
-          </div>
-          <pre><code>type: custom:entity-display-card
+    - temperature`
+      },
+      {
+        icon: 'mdi:water-percent',
+        title: 'Teplota a vlhkost',
+        code: `type: custom:entity-display-card
 title: "Klima v domě"
 layout: detailed
 group_by: area
@@ -554,29 +557,23 @@ show_graph: true
 filter:
   device_class:
     - temperature
-    - humidity</code></pre>
-        </div>
-
-        <div class="example-card">
-          <div class="example-header">
-            <ha-icon icon="mdi:battery"></ha-icon>
-            <span>Slabé baterie</span>
-          </div>
-          <pre><code>type: custom:entity-display-card
+    - humidity`
+      },
+      {
+        icon: 'mdi:battery',
+        title: 'Slabé baterie',
+        code: `type: custom:entity-display-card
 title: "Baterie k výměně"
 layout: list
 filter:
   device_class:
     - battery
-sort_by: state</code></pre>
-        </div>
-
-        <div class="example-card">
-          <div class="example-header">
-            <ha-icon icon="mdi:gauge"></ha-icon>
-            <span>Všechny senzory (gauge)</span>
-          </div>
-          <pre><code>type: custom:entity-display-card
+sort_by: state`
+      },
+      {
+        icon: 'mdi:gauge',
+        title: 'Všechny senzory (gauge)',
+        code: `type: custom:entity-display-card
 title: "Přehled senzorů"
 layout: gauge
 group_by: type
@@ -586,15 +583,12 @@ filter:
     - humidity
     - pressure
     - illuminance
-    - battery</code></pre>
-        </div>
-
-        <div class="example-card">
-          <div class="example-header">
-            <ha-icon icon="mdi:grid"></ha-icon>
-            <span>Kompaktní přehled</span>
-          </div>
-          <pre><code>type: custom:entity-display-card
+    - battery`
+      },
+      {
+        icon: 'mdi:grid',
+        title: 'Kompaktní přehled',
+        code: `type: custom:entity-display-card
 title: "Quick View"
 layout: compact
 columns: 3
@@ -603,34 +597,119 @@ filter:
   device_class:
     - temperature
     - humidity
-    - battery</code></pre>
-        </div>
+    - battery`
+      }
+    ] : [
+      {
+        icon: 'mdi:thermometer',
+        title: 'All temperature sensors',
+        code: `type: custom:entity-display-card
+title: "Temperature Sensors"
+layout: grid
+columns: 2
+filter:
+  device_class:
+    - temperature`
+      },
+      {
+        icon: 'mdi:water-percent',
+        title: 'Temperature and humidity',
+        code: `type: custom:entity-display-card
+title: "Climate Overview"
+layout: detailed
+group_by: area
+show_graph: true
+filter:
+  device_class:
+    - temperature
+    - humidity`
+      },
+      {
+        icon: 'mdi:battery',
+        title: 'Low batteries',
+        code: `type: custom:entity-display-card
+title: "Batteries to Replace"
+layout: list
+filter:
+  device_class:
+    - battery
+sort_by: state`
+      },
+      {
+        icon: 'mdi:gauge',
+        title: 'All sensors (gauge)',
+        code: `type: custom:entity-display-card
+title: "Sensors Overview"
+layout: gauge
+group_by: type
+filter:
+  device_class:
+    - temperature
+    - humidity
+    - pressure
+    - illuminance
+    - battery`
+      },
+      {
+        icon: 'mdi:grid',
+        title: 'Compact overview',
+        code: `type: custom:entity-display-card
+title: "Quick View"
+layout: compact
+columns: 3
+show_name: false
+filter:
+  device_class:
+    - temperature
+    - humidity
+    - battery`
+      }
+    ];
+
+    return html`
+      <div class="editor-section">
+        <div class="section-header">${lang === 'cs' ? 'Příklady použití' : 'Usage Examples'}</div>
+
+        ${examples.map(example => html`
+          <div class="example-card">
+            <div class="example-header">
+              <ha-icon icon="${example.icon}"></ha-icon>
+              <span>${example.title}</span>
+            </div>
+            <pre><code>${example.code}</code></pre>
+          </div>
+        `)}
       </div>
     `;
   }
 
-  private _getDeviceClassLabel(deviceClass: string): string {
-    const labels: Record<string, string> = {
-      temperature: 'Teplota',
-      humidity: 'Vlhkost',
-      battery: 'Baterie',
-      pressure: 'Tlak',
-      illuminance: 'Osvětlení',
-      power: 'Výkon',
-      energy: 'Energie',
-      carbon_dioxide: 'CO₂',
-      volatile_organic_compounds: 'VOC',
-      pm25: 'PM2.5',
-      signal_strength: 'Síla signálu',
+  private _getDeviceClassLabel(deviceClass: string, language?: string): string {
+    const lang = language || getLanguage(this.hass);
+
+    const mapping: Record<string, string> = {
+      temperature: 'device_temperature',
+      humidity: 'device_humidity',
+      battery: 'device_battery',
+      pressure: 'device_pressure',
+      illuminance: 'device_illuminance',
+      power: 'device_power',
+      energy: 'device_energy',
+      carbon_dioxide: 'device_carbon_dioxide',
+      volatile_organic_compounds: 'device_volatile_organic_compounds',
+      pm25: 'device_pm25',
+      signal_strength: 'device_signal_strength',
     };
 
-    return labels[deviceClass] || deviceClass;
+    const key = mapping[deviceClass];
+    return key ? localize(key as any, lang) : deviceClass;
   }
 
   render() {
     if (!this._config) {
       return html``;
     }
+
+    const lang = getLanguage(this.hass);
 
     return html`
       <div class="editor-container">
@@ -639,31 +718,31 @@ filter:
             .active=${this._selectedTab === 0}
             @click=${() => (this._selectedTab = 0)}
           >
-            Obecné
+            ${localize('editor_tab_general', lang)}
           </mwc-tab>
           <mwc-tab
             .active=${this._selectedTab === 1}
             @click=${() => (this._selectedTab = 1)}
           >
-            Entity
+            ${localize('editor_tab_entities', lang)}
           </mwc-tab>
           <mwc-tab
             .active=${this._selectedTab === 2}
             @click=${() => (this._selectedTab = 2)}
           >
-            Filtry
+            ${localize('editor_tab_filters', lang)}
           </mwc-tab>
           <mwc-tab
             .active=${this._selectedTab === 3}
             @click=${() => (this._selectedTab = 3)}
           >
-            Typy
+            ${localize('editor_tab_types', lang)}
           </mwc-tab>
           <mwc-tab
             .active=${this._selectedTab === 4}
             @click=${() => (this._selectedTab = 4)}
           >
-            Příklady
+            ${localize('editor_tab_examples', lang)}
           </mwc-tab>
         </div>
 
