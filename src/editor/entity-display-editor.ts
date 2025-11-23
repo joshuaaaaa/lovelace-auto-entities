@@ -98,6 +98,43 @@ class EntityDisplayEditor extends LitElement {
     this._fireConfigChanged();
   }
 
+  private _addExcludeEntity() {
+    const excludeEntities = this._config.exclude_entities || [];
+    const newExcludeEntities = [...excludeEntities, ''];
+
+    this._config = {
+      ...this._config,
+      exclude_entities: newExcludeEntities,
+    };
+
+    this._fireConfigChanged();
+  }
+
+  private _removeExcludeEntity(index: number) {
+    const excludeEntities = this._config.exclude_entities || [];
+    const newExcludeEntities = excludeEntities.filter((_, i) => i !== index);
+
+    this._config = {
+      ...this._config,
+      exclude_entities: newExcludeEntities,
+    };
+
+    this._fireConfigChanged();
+  }
+
+  private _updateExcludeEntity(index: number, value: string) {
+    const excludeEntities = this._config.exclude_entities || [];
+    const newExcludeEntities = [...excludeEntities];
+    newExcludeEntities[index] = value;
+
+    this._config = {
+      ...this._config,
+      exclude_entities: newExcludeEntities,
+    };
+
+    this._fireConfigChanged();
+  }
+
   private _addDeviceClass() {
     const filter = this._config.filter || {};
     const deviceClasses = filter.device_class || [];
@@ -408,6 +445,7 @@ class EntityDisplayEditor extends LitElement {
 
   private _renderEntitiesTab() {
     const entities = this._config.entities || [];
+    const excludeEntities = this._config.exclude_entities || [];
     const lang = getLanguage(this.hass);
 
     return html`
@@ -438,6 +476,38 @@ class EntityDisplayEditor extends LitElement {
         <mwc-button @click=${this._addEntity}>
           <ha-icon icon="mdi:plus"></ha-icon>
           ${localize('editor_add_entity', lang)}
+        </mwc-button>
+      </div>
+
+      <div class="editor-section">
+        <div class="section-header">${lang === 'cs' ? 'Entity k vyloučení' : 'Exclude entities'}</div>
+        <p class="section-description">
+          ${lang === 'cs'
+            ? 'Entity vybrané zde budou vyloučeny ze zobrazení.'
+            : 'Entities selected here will be excluded from display.'}
+        </p>
+
+        ${excludeEntities.map(
+          (entity, index) => html`
+            <div class="editor-row entity-row">
+              <ha-entity-picker
+                .hass=${this.hass}
+                .value=${entity}
+                @value-changed=${(ev: CustomEvent) =>
+                  this._updateExcludeEntity(index, ev.detail.value)}
+                allow-custom-entity
+              ></ha-entity-picker>
+              <ha-icon-button
+                .path=${'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z'}
+                @click=${() => this._removeExcludeEntity(index)}
+              ></ha-icon-button>
+            </div>
+          `
+        )}
+
+        <mwc-button @click=${this._addExcludeEntity}>
+          <ha-icon icon="mdi:plus"></ha-icon>
+          ${lang === 'cs' ? 'Přidat entitu k vyloučení' : 'Add exclude entity'}
         </mwc-button>
       </div>
     `;

@@ -179,6 +179,13 @@ class EntityDisplayCard extends LitElement {
       }
     }
 
+    // Vyloučení konkrétních entit
+    if (this._config.exclude_entities) {
+      for (const excludeEntity of this._config.exclude_entities) {
+        entityIds.delete(excludeEntity);
+      }
+    }
+
     return Array.from(entityIds);
   }
 
