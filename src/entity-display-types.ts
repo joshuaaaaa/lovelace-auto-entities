@@ -17,13 +17,10 @@ export interface EntityDisplayConfig {
   show_graph?: boolean;
   sort_by?: 'name' | 'state' | 'last_changed' | 'area';
   sort_reverse?: boolean;
+  ignore_invalid?: boolean;
   entity_types?: EntityTypeConfig[];
   theme?: 'default' | 'modern' | 'minimal';
   card_mod?: any;
-  // Vizuální efekty
-  glass_effect?: boolean;
-  animations?: boolean;
-  gradient_background?: boolean;
   // Graf konfigurace
   graph_type?: 'line' | 'bar' | 'area';
   graph_hours?: number;
