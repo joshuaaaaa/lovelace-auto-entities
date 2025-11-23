@@ -632,6 +632,14 @@ class EntityDisplayCard extends LitElement {
       const maxValue = Math.max(...values);
       const range = maxValue - minValue || 1;
 
+      // Debug: vypíšeme min/max a pár sample hodnot
+      const currentValue = parseFloat(String(entity.state));
+      console.log(`Graph for ${entity.entity_id}:`);
+      console.log(`  Current value: ${currentValue.toFixed(2)}`);
+      console.log(`  Min: ${minValue.toFixed(2)}, Max: ${maxValue.toFixed(2)}, Range: ${range.toFixed(2)}`);
+      console.log(`  First 5 values:`, values.slice(0, 5).map(v => v.toFixed(2)));
+      console.log(`  Last 5 values:`, values.slice(-5).map(v => v.toFixed(2)));
+
       // Padding pro graf
       const padding = 10;
       const graphWidth = width - padding * 2;
@@ -708,23 +716,14 @@ class EntityDisplayCard extends LitElement {
   private _createSmoothPath(points: Array<{x: number, y: number, value: number}>): string {
     if (points.length < 2) return '';
 
+    // Začneme přesunem na první bod
     let path = `M ${points[0].x},${points[0].y}`;
 
-    // Použijeme kvadratické Bézier křivky pro smooth efekt
-    for (let i = 0; i < points.length - 1; i++) {
-      const current = points[i];
-      const next = points[i + 1];
-
-      // Control point je uprostřed mezi aktuálním a dalším bodem
-      const controlX = (current.x + next.x) / 2;
-      const controlY = (current.y + next.y) / 2;
-
-      path += ` Q ${current.x},${current.y} ${controlX},${controlY}`;
+    // Pro lepší smooth efekt použijeme jednodušší přístup - přímé čáry
+    // (Kvadratické Bézier křivky byly špatně implementované)
+    for (let i = 1; i < points.length; i++) {
+      path += ` L ${points[i].x},${points[i].y}`;
     }
-
-    // Poslední segment
-    const last = points[points.length - 1];
-    path += ` L ${last.x},${last.y}`;
 
     return path;
   }
@@ -741,10 +740,21 @@ class EntityDisplayCard extends LitElement {
     return lines.join('');
   }
 
+  private _formatGraphValue(value: number): string {
+    // Inteligentní formátování podle velikosti hodnoty
+    if (Math.abs(value) >= 100) {
+      return value.toFixed(0); // Pro velké hodnoty bez desetinných míst
+    } else if (Math.abs(value) >= 10) {
+      return value.toFixed(1); // Pro střední hodnoty jedno desetinné místo
+    } else {
+      return value.toFixed(2); // Pro malé hodnoty dvě desetinná místa
+    }
+  }
+
   private _createValueLabels(minValue: number, maxValue: number, height: number, padding: number): string {
     return `
-      <text x="2" y="${padding + 3}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${maxValue.toFixed(1)}</text>
-      <text x="2" y="${height - padding}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${minValue.toFixed(1)}</text>
+      <text x="2" y="${padding + 10}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${this._formatGraphValue(maxValue)}</text>
+      <text x="2" y="${height - padding + 2}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${this._formatGraphValue(minValue)}</text>
     `;
   }
 
