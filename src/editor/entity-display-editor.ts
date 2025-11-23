@@ -19,7 +19,14 @@ class EntityDisplayEditor extends LitElement {
 
     const target = ev.target as any;
     const configValue = target.configValue;
-    const value = target.value || ev.detail.value;
+
+    // Pro checkboxy použijeme .checked, pro ostatní .value
+    let value;
+    if (target.tagName === 'HA-CHECKBOX') {
+      value = target.checked;
+    } else {
+      value = target.value !== undefined ? target.value : ev.detail.value;
+    }
 
     if (configValue) {
       const newConfig = { ...this._config };
