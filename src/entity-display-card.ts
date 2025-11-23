@@ -534,39 +534,35 @@ class EntityDisplayCard extends LitElement {
     const startTime = new Date(endTime.getTime() - hours * 60 * 60 * 1000);
 
     try {
-      // Používáme standardní response (ne minimal) pro lepší kompatibilitu
-      const history = await this.hass.callWS({
-        type: 'history/history_during_period',
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
-        entity_ids: [entityId],
-        significant_changes_only: false,
-        no_attributes: true,
-      });
+      // Používáme REST API endpoint jako mini-graph-card
+      const url = `history/period/${startTime.toISOString()}?filter_entity_id=${entityId}&end_time=${endTime.toISOString()}&minimal_response&no_attributes&significant_changes_only=0`;
+
+      console.log(`Fetching history for ${entityId} from ${url}`);
+      const history = await this.hass.callApi('GET', url);
 
       if (!history || !history[0] || history[0].length === 0) {
         console.warn(`No history data for ${entityId}`);
         return [];
       }
 
+      console.log(`Received ${history[0].length} history points for ${entityId}`);
+
       // Zpracování dat - [timestamp, value]
       const dataPoints: number[][] = [];
       for (const point of history[0]) {
-        // Zkusíme různé formáty
         let value: number;
         let timestamp: number;
 
-        // Minimal response format (s = state, lu = last_updated)
+        // Minimal response format (s = state, lu = last_updated in seconds)
         if (point.s !== undefined) {
           value = parseFloat(String(point.s));
-          timestamp = new Date(point.lu * 1000).getTime();
+          timestamp = point.lu * 1000; // lu je v sekundách, převedeme na milisekundy
         }
         // Standard format
         else if (point.state !== undefined) {
           value = parseFloat(String(point.state));
           timestamp = new Date(point.last_changed || point.last_updated).getTime();
         }
-        // Alternativní formát
         else {
           continue;
         }
@@ -575,6 +571,13 @@ class EntityDisplayCard extends LitElement {
           dataPoints.push([timestamp, value]);
         }
       }
+
+      if (dataPoints.length === 0) {
+        console.warn(`No valid numeric data points for ${entityId}`);
+        return [];
+      }
+
+      console.log(`Processed ${dataPoints.length} valid data points for ${entityId}`);
 
       // Agregace dat pokud je jich příliš mnoho (max 100 bodů)
       if (dataPoints.length > 100) {
@@ -659,25 +662,34 @@ class EntityDisplayCard extends LitElement {
 
       // Aktualizujeme DOM element s grafem
       requestAnimationFrame(() => {
+        // Escapujeme entity ID pro bezpečný querySelector
+        const safeEntityId = entity.entity_id.replace(/[.]/g, '\\.');
         const graphContainer = this.shadowRoot?.querySelector(
-          `[data-entity-id="${entity.entity_id}"] .detailed-graph svg`
+          `[data-entity-id="${safeEntityId}"] .detailed-graph svg`
         );
-        if (graphContainer) {
-          const gridLines = this._createGridLines(width, height, padding, minValue, maxValue);
 
-          graphContainer.innerHTML = `
-            <defs>
-              <linearGradient id="gradient-${entity.entity_id}" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" style="stop-color:${lineColor};stop-opacity:0.3" />
-                <stop offset="100%" style="stop-color:${lineColor};stop-opacity:0.05" />
-              </linearGradient>
-            </defs>
-            ${gridLines}
-            ${fill && fillPath ? `<path d="${fillPath}" fill="url(#gradient-${entity.entity_id})" />` : ''}
-            <path d="${pathData}" stroke="${lineColor}" stroke-width="2" fill="${fill && !fillPath ? lineColor : 'none'}" opacity="${fill && !fillPath ? '0.3' : '1'}" stroke-linecap="round" stroke-linejoin="round"/>
-            ${this._createValueLabels(minValue, maxValue, height, padding)}
-          `;
+        if (!graphContainer) {
+          console.error(`Graph container not found for ${entity.entity_id}`);
+          return;
         }
+
+        console.log(`Updating graph for ${entity.entity_id} with ${dataPoints.length} points`);
+
+        const gridLines = this._createGridLines(width, height, padding, minValue, maxValue);
+        const gradientId = entity.entity_id.replace(/[.:]/g, '_');
+
+        graphContainer.innerHTML = `
+          <defs>
+            <linearGradient id="gradient-${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:${lineColor};stop-opacity:0.3" />
+              <stop offset="100%" style="stop-color:${lineColor};stop-opacity:0.05" />
+            </linearGradient>
+          </defs>
+          ${gridLines}
+          ${fill && fillPath ? `<path d="${fillPath}" fill="url(#gradient-${gradientId})" />` : ''}
+          <path d="${pathData}" stroke="${lineColor}" stroke-width="2" fill="${fill && !fillPath ? lineColor : 'none'}" opacity="${fill && !fillPath ? '0.3' : '1'}" stroke-linecap="round" stroke-linejoin="round"/>
+          ${this._createValueLabels(minValue, maxValue, height, padding)}
+        `;
       });
     }).catch(error => {
       console.error(`Error rendering graph for ${entity.entity_id}:`, error);
