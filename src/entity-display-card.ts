@@ -355,11 +355,11 @@ class EntityDisplayCard extends LitElement {
           result = a.name.localeCompare(b.name);
           break;
         case 'state':
-          if (typeof a.state === 'number' && typeof b.state === 'number') {
-            result = a.state - b.state;
-          } else {
-            result = String(a.state).localeCompare(String(b.state));
-          }
+          let valA = parseFloat(String(a.state));
+          let valB = parseFloat(String(b.state));
+          if (isNaN(valA)) valA = 0;
+          if (isNaN(valB)) valB = 0;
+          result = valA - valB;
           break;
         case 'last_changed':
           result = b.last_changed.getTime() - a.last_changed.getTime();
