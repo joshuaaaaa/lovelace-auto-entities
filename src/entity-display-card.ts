@@ -71,7 +71,7 @@ class EntityDisplayCard extends LitElement {
     if (!this.hass || !this._config) return;
 
     const entities: ProcessedEntity[] = [];
-    const invalidStates = ['unknown', 'none', 'unavailable', 'null', 'undefined'];
+    const invalidStates = ['unknown', 'none', 'unavailable', 'null', 'undefined', 'normal'];
 
     // Získání entit ze konfigurace
     const entityIds = this._getEntityIds();
@@ -80,10 +80,17 @@ class EntityDisplayCard extends LitElement {
       const stateObj = this.hass.states[entityId];
       if (!stateObj) continue;
 
+      const state = String(stateObj.state).toLowerCase();
+
       // Filtrování neplatných stavů pokud je zapnuto
       if (this._config.ignore_invalid) {
-        const state = String(stateObj.state).toLowerCase();
         if (invalidStates.includes(state)) {
+          continue;
+        }
+
+        // Filtr pro číselné hodnoty - zkontroluje, jestli je stav číslo
+        const numericValue = parseFloat(stateObj.state);
+        if (isNaN(numericValue) || !isFinite(numericValue)) {
           continue;
         }
       }
@@ -527,33 +534,74 @@ class EntityDisplayCard extends LitElement {
     const startTime = new Date(endTime.getTime() - hours * 60 * 60 * 1000);
 
     try {
+      // Používáme standardní response (ne minimal) pro lepší kompatibilitu
       const history = await this.hass.callWS({
         type: 'history/history_during_period',
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
         entity_ids: [entityId],
-        minimal_response: true,
+        significant_changes_only: false,
         no_attributes: true,
       });
 
       if (!history || !history[0] || history[0].length === 0) {
+        console.warn(`No history data for ${entityId}`);
         return [];
       }
 
       // Zpracování dat - [timestamp, value]
       const dataPoints: number[][] = [];
       for (const point of history[0]) {
-        const value = parseFloat(point.s);
-        if (!isNaN(value) && isFinite(value)) {
-          dataPoints.push([new Date(point.lu * 1000).getTime(), value]);
+        // Zkusíme různé formáty
+        let value: number;
+        let timestamp: number;
+
+        // Minimal response format (s = state, lu = last_updated)
+        if (point.s !== undefined) {
+          value = parseFloat(String(point.s));
+          timestamp = new Date(point.lu * 1000).getTime();
         }
+        // Standard format
+        else if (point.state !== undefined) {
+          value = parseFloat(String(point.state));
+          timestamp = new Date(point.last_changed || point.last_updated).getTime();
+        }
+        // Alternativní formát
+        else {
+          continue;
+        }
+
+        if (!isNaN(value) && isFinite(value)) {
+          dataPoints.push([timestamp, value]);
+        }
+      }
+
+      // Agregace dat pokud je jich příliš mnoho (max 100 bodů)
+      if (dataPoints.length > 100) {
+        return this._aggregateDataPoints(dataPoints, 100);
       }
 
       return dataPoints;
     } catch (error) {
-      console.error('Error fetching history:', error);
+      console.error(`Error fetching history for ${entityId}:`, error);
       return [];
     }
+  }
+
+  private _aggregateDataPoints(dataPoints: number[][], targetPoints: number): number[][] {
+    if (dataPoints.length <= targetPoints) return dataPoints;
+
+    const bucketSize = Math.ceil(dataPoints.length / targetPoints);
+    const aggregated: number[][] = [];
+
+    for (let i = 0; i < dataPoints.length; i += bucketSize) {
+      const bucket = dataPoints.slice(i, i + bucketSize);
+      const avgTimestamp = bucket.reduce((sum, p) => sum + p[0], 0) / bucket.length;
+      const avgValue = bucket.reduce((sum, p) => sum + p[1], 0) / bucket.length;
+      aggregated.push([avgTimestamp, avgValue]);
+    }
+
+    return aggregated;
   }
 
   private _renderGraph(entity: ProcessedEntity, width: number = 300, height: number = 80) {
@@ -565,7 +613,15 @@ class EntityDisplayCard extends LitElement {
 
     // Načteme historii asynchronně
     this._fetchHistory(entity.entity_id, graphHours).then((dataPoints) => {
-      if (dataPoints.length === 0) return;
+      if (dataPoints.length === 0) {
+        console.warn(`No data points to render for ${entity.entity_id}`);
+        return;
+      }
+
+      if (dataPoints.length < 2) {
+        console.warn(`Not enough data points (${dataPoints.length}) for ${entity.entity_id}`);
+        return;
+      }
 
       // Najdeme min a max hodnoty pro škálování
       const values = dataPoints.map(d => d[1]);
@@ -574,27 +630,31 @@ class EntityDisplayCard extends LitElement {
       const range = maxValue - minValue || 1;
 
       // Padding pro graf
-      const padding = 5;
+      const padding = 10;
       const graphWidth = width - padding * 2;
       const graphHeight = height - padding * 2;
 
-      // Vytvoření SVG path
-      const points = dataPoints.map((point, index) => {
+      // Vytvoření bodů pro graf
+      const points: Array<{x: number, y: number, value: number}> = dataPoints.map((point, index) => {
         const x = padding + (index / (dataPoints.length - 1)) * graphWidth;
         const y = padding + graphHeight - ((point[1] - minValue) / range) * graphHeight;
-        return `${x},${y}`;
+        return { x, y, value: point[1] };
       });
 
-      const pathData = graphType === 'line' || graphType === 'area'
-        ? `M ${points.join(' L ')}`
-        : this._createBarPath(dataPoints, minValue, range, padding, graphWidth, graphHeight);
-
-      // Pro area graf přidáme fill path
+      let pathData = '';
       let fillPath = '';
-      if (fill && graphType === 'area') {
-        const firstPoint = points[0].split(',');
-        const lastPoint = points[points.length - 1].split(',');
-        fillPath = `${pathData} L ${lastPoint[0]},${height - padding} L ${firstPoint[0]},${height - padding} Z`;
+
+      if (graphType === 'line' || graphType === 'area') {
+        // Vytvoříme smooth curve pomocí kvadratických Bézier křivek
+        pathData = this._createSmoothPath(points);
+
+        // Pro area graf přidáme fill path
+        if (fill && graphType === 'area') {
+          fillPath = `${pathData} L ${points[points.length - 1].x},${height - padding} L ${points[0].x},${height - padding} Z`;
+        }
+      } else {
+        // Bar chart
+        pathData = this._createBarPath(dataPoints, minValue, range, padding, graphWidth, graphHeight);
       }
 
       // Aktualizujeme DOM element s grafem
@@ -603,21 +663,76 @@ class EntityDisplayCard extends LitElement {
           `[data-entity-id="${entity.entity_id}"] .detailed-graph svg`
         );
         if (graphContainer) {
+          const gridLines = this._createGridLines(width, height, padding, minValue, maxValue);
+
           graphContainer.innerHTML = `
-            ${fill && fillPath ? `<path d="${fillPath}" fill="${lineColor}" opacity="0.2"/>` : ''}
-            <path d="${pathData}" stroke="${lineColor}" stroke-width="2" fill="${fill && !fillPath ? lineColor : 'none'}" opacity="${fill && !fillPath ? '0.3' : '1'}"/>
+            <defs>
+              <linearGradient id="gradient-${entity.entity_id}" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:${lineColor};stop-opacity:0.3" />
+                <stop offset="100%" style="stop-color:${lineColor};stop-opacity:0.05" />
+              </linearGradient>
+            </defs>
+            ${gridLines}
+            ${fill && fillPath ? `<path d="${fillPath}" fill="url(#gradient-${entity.entity_id})" />` : ''}
+            <path d="${pathData}" stroke="${lineColor}" stroke-width="2" fill="${fill && !fillPath ? lineColor : 'none'}" opacity="${fill && !fillPath ? '0.3' : '1'}" stroke-linecap="round" stroke-linejoin="round"/>
+            ${this._createValueLabels(minValue, maxValue, height, padding)}
           `;
         }
       });
+    }).catch(error => {
+      console.error(`Error rendering graph for ${entity.entity_id}:`, error);
     });
 
     // Vrátíme placeholder SVG, který bude aktualizován
     return html`
-      <svg width="${width}" height="${height}" style="display: block;">
-        <text x="${width / 2}" y="${height / 2}" text-anchor="middle" fill="var(--secondary-text-color)" font-size="12">
+      <svg width="${width}" height="${height}" style="display: block; background: transparent;">
+        <text x="${width / 2}" y="${height / 2}" text-anchor="middle" fill="var(--secondary-text-color)" font-size="11">
           ${localize('loading', getLanguage(this.hass))}
         </text>
       </svg>
+    `;
+  }
+
+  private _createSmoothPath(points: Array<{x: number, y: number, value: number}>): string {
+    if (points.length < 2) return '';
+
+    let path = `M ${points[0].x},${points[0].y}`;
+
+    // Použijeme kvadratické Bézier křivky pro smooth efekt
+    for (let i = 0; i < points.length - 1; i++) {
+      const current = points[i];
+      const next = points[i + 1];
+
+      // Control point je uprostřed mezi aktuálním a dalším bodem
+      const controlX = (current.x + next.x) / 2;
+      const controlY = (current.y + next.y) / 2;
+
+      path += ` Q ${current.x},${current.y} ${controlX},${controlY}`;
+    }
+
+    // Poslední segment
+    const last = points[points.length - 1];
+    path += ` L ${last.x},${last.y}`;
+
+    return path;
+  }
+
+  private _createGridLines(width: number, height: number, padding: number, minValue: number, maxValue: number): string {
+    const lines: string[] = [];
+    const numLines = 3;
+
+    for (let i = 0; i <= numLines; i++) {
+      const y = padding + (height - padding * 2) * (i / numLines);
+      lines.push(`<line x1="${padding}" y1="${y}" x2="${width - padding}" y2="${y}" stroke="var(--divider-color)" stroke-width="0.5" opacity="0.3"/>`);
+    }
+
+    return lines.join('');
+  }
+
+  private _createValueLabels(minValue: number, maxValue: number, height: number, padding: number): string {
+    return `
+      <text x="2" y="${padding + 3}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${maxValue.toFixed(1)}</text>
+      <text x="2" y="${height - padding}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${minValue.toFixed(1)}</text>
     `;
   }
 
