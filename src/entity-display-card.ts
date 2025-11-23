@@ -12,11 +12,18 @@ import { modernStyles } from './entity-display-modern-styles.css';
 import { localize, getLanguage } from './localize';
 import './editor/entity-display-editor';
 
+interface GraphData {
+  dataPoints: number[][];
+  minValue: number;
+  maxValue: number;
+}
+
 class EntityDisplayCard extends LitElement {
   @property() public hass: any;
   @state() private _config: EntityDisplayConfig;
   @state() private _entities: ProcessedEntity[] = [];
   @state() private _groupedEntities: GroupedEntities = {};
+  @state() private _graphData: Map<string, GraphData> = new Map();
 
   static getConfigElement() {
     return document.createElement('entity-display-editor');
@@ -615,86 +622,85 @@ class EntityDisplayCard extends LitElement {
     const lineColor = this._config.graph_line_color || entity.color;
     const fill = this._config.graph_fill !== false;
 
-    // Načteme historii asynchronně
-    this._fetchHistory(entity.entity_id, graphHours).then((dataPoints) => {
-      if (dataPoints.length === 0 || dataPoints.length < 2) {
-        return;
-      }
+    // Načteme historii asynchronně pokud ještě není v cache
+    if (!this._graphData.has(entity.entity_id)) {
+      this._fetchHistory(entity.entity_id, graphHours).then((dataPoints) => {
+        if (dataPoints.length >= 2) {
+          const values = dataPoints.map(d => d[1]);
+          const minValue = Math.min(...values);
+          const maxValue = Math.max(...values);
 
-      // Najdeme min a max hodnoty pro škálování
-      const values = dataPoints.map(d => d[1]);
-      const minValue = Math.min(...values);
-      const maxValue = Math.max(...values);
-      const range = maxValue - minValue || 1;
-
-      // Padding pro graf
-      const padding = 10;
-      const graphWidth = width - padding * 2;
-      const graphHeight = height - padding * 2;
-
-      // Vytvoření bodů pro graf
-      const points: Array<{x: number, y: number, value: number}> = dataPoints.map((point, index) => {
-        const x = padding + (index / (dataPoints.length - 1)) * graphWidth;
-        const y = padding + graphHeight - ((point[1] - minValue) / range) * graphHeight;
-        return { x, y, value: point[1] };
-      });
-
-      let pathData = '';
-      let fillPath = '';
-
-      if (graphType === 'line' || graphType === 'area') {
-        // Vytvoříme smooth curve pomocí kvadratických Bézier křivek
-        pathData = this._createSmoothPath(points);
-
-        // Pro area graf přidáme fill path
-        if (fill && graphType === 'area') {
-          fillPath = `${pathData} L ${points[points.length - 1].x},${height - padding} L ${points[0].x},${height - padding} Z`;
+          this._graphData.set(entity.entity_id, { dataPoints, minValue, maxValue });
+          this.requestUpdate();
         }
-      } else {
-        // Bar chart
-        pathData = this._createBarPath(dataPoints, minValue, range, padding, graphWidth, graphHeight);
-      }
-
-      // Aktualizujeme DOM element s grafem
-      requestAnimationFrame(() => {
-        // Escapujeme entity ID pro bezpečný querySelector
-        const safeEntityId = entity.entity_id.replace(/[.]/g, '\\.');
-        const graphContainer = this.shadowRoot?.querySelector(
-          `[data-entity-id="${safeEntityId}"] .detailed-graph svg`
-        );
-
-        if (!graphContainer) {
-          return;
-        }
-
-        const gridLines = this._createGridLines(width, height, padding, minValue, maxValue);
-        const gradientId = entity.entity_id.replace(/[.:]/g, '_');
-
-        graphContainer.innerHTML = `
-          <defs>
-            <linearGradient id="gradient-${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style="stop-color:${lineColor};stop-opacity:0.3" />
-              <stop offset="100%" style="stop-color:${lineColor};stop-opacity:0.05" />
-            </linearGradient>
-          </defs>
-          ${gridLines}
-          ${fill && fillPath ? `<path d="${fillPath}" fill="url(#gradient-${gradientId})" />` : ''}
-          <path d="${pathData}" stroke="${lineColor}" stroke-width="2" fill="${fill && !fillPath ? lineColor : 'none'}" opacity="${fill && !fillPath ? '0.3' : '1'}" stroke-linecap="round" stroke-linejoin="round"/>
-          ${this._createValueLabels(minValue, maxValue, height, padding)}
-        `;
+      }).catch(() => {
+        // Ignorujeme chyby tiše
       });
-    }).catch(error => {
-      console.error(`Error rendering graph for ${entity.entity_id}:`, error);
+    }
+
+    // Získáme data z cache
+    const graphData = this._graphData.get(entity.entity_id);
+
+    if (!graphData) {
+      // Placeholder pokud ještě není načteno
+      return html`
+        <svg width="${width}" height="${height}" style="display: block; background: transparent;">
+          <text x="${width / 2}" y="${height / 2}" text-anchor="middle" fill="var(--secondary-text-color)" font-size="11">
+            ${localize('loading', getLanguage(this.hass))}
+          </text>
+        </svg>
+      `;
+    }
+
+    const { dataPoints, minValue, maxValue } = graphData;
+    const range = maxValue - minValue || 1;
+    const padding = 10;
+    const graphWidth = width - padding * 2;
+    const graphHeight = height - padding * 2;
+
+    // Vytvoření bodů pro graf
+    const points: Array<{x: number, y: number, value: number}> = dataPoints.map((point, index) => {
+      const x = padding + (index / (dataPoints.length - 1)) * graphWidth;
+      const y = padding + graphHeight - ((point[1] - minValue) / range) * graphHeight;
+      return { x, y, value: point[1] };
     });
 
-    // Vrátíme placeholder SVG, který bude aktualizován
+    let pathData = '';
+    let fillPath = '';
+
+    if (graphType === 'line' || graphType === 'area') {
+      pathData = this._createSmoothPath(points);
+      if (fill && graphType === 'area') {
+        fillPath = `${pathData} L ${points[points.length - 1].x},${height - padding} L ${points[0].x},${height - padding} Z`;
+      }
+    } else {
+      pathData = this._createBarPath(dataPoints, minValue, range, padding, graphWidth, graphHeight);
+    }
+
+    const gridLines = this._createGridLines(width, height, padding, minValue, maxValue);
+    const gradientId = entity.entity_id.replace(/[.:]/g, '_');
+
+    // Renderujeme kompletní SVG synchronně
     return html`
       <svg width="${width}" height="${height}" style="display: block; background: transparent;">
-        <text x="${width / 2}" y="${height / 2}" text-anchor="middle" fill="var(--secondary-text-color)" font-size="11">
-          ${localize('loading', getLanguage(this.hass))}
-        </text>
+        <defs>
+          <linearGradient id="gradient-${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:${lineColor};stop-opacity:0.3" />
+            <stop offset="100%" style="stop-color:${lineColor};stop-opacity:0.05" />
+          </linearGradient>
+        </defs>
+        ${this._unsafeHTML(gridLines)}
+        ${fill && fillPath ? html`<path d="${fillPath}" fill="url(#gradient-${gradientId})" />` : ''}
+        <path d="${pathData}" stroke="${lineColor}" stroke-width="2" fill="${fill && !fillPath ? lineColor : 'none'}" opacity="${fill && !fillPath ? '0.3' : '1'}" stroke-linecap="round" stroke-linejoin="round"/>
+        ${this._unsafeHTML(this._createValueLabels(minValue, maxValue, height, padding))}
       </svg>
     `;
+  }
+
+  private _unsafeHTML(htmlString: string) {
+    const template = document.createElement('template');
+    template.innerHTML = htmlString;
+    return template.content;
   }
 
   private _createSmoothPath(points: Array<{x: number, y: number, value: number}>): string {
