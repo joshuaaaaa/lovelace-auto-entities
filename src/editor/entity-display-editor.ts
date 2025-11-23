@@ -309,6 +309,16 @@ class EntityDisplayEditor extends LitElement {
           ></ha-textfield>
         </div>
 
+        <div class="editor-row">
+          <ha-textfield
+            label="Graph color (hex or CSS variable)"
+            .configValue=${'graph_line_color'}
+            .value=${this._config.graph_line_color || ''}
+            placeholder="var(--primary-color) or #03a9f4"
+            @change=${this._valueChanged}
+          ></ha-textfield>
+        </div>
+
         <div class="editor-row checkbox-row">
           <ha-formfield label="${localize('editor_graph_fill', lang)}">
             <ha-checkbox
