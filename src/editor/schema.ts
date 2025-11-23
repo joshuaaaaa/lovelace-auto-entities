@@ -176,6 +176,17 @@ export const entitiesSchema = [
     selector: { object: {} },
   },
 ];
+export const excludeEntitiesSchema = [
+  {
+    name: "exclude_entities",
+    label: "Exclude entities:",
+    selector: {
+      entity: {
+        multiple: true
+      }
+    },
+  },
+];
 export const templateSchema = [
   {
     name: "template",

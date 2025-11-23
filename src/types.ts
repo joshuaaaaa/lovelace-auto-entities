@@ -42,6 +42,7 @@ interface FilterConfig {
 export interface AutoEntitiesConfig {
   card: any;
   entities: Array<LovelaceRowConfig | string>;
+  exclude_entities?: Array<string>;
   filter: {
     template?: string;
     include?: FilterConfig[];
