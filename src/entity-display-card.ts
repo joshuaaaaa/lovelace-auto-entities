@@ -1,5 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, svg } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import {
   EntityDisplayConfig,
   ProcessedEntity,
@@ -594,7 +595,7 @@ class EntityDisplayCard extends LitElement {
 
       return dataPoints;
     } catch (error) {
-      console.error(`Error fetching history for ${entityId}:`, error);
+      // Tiše ignorujeme chyby
       return [];
     }
   }
@@ -681,7 +682,7 @@ class EntityDisplayCard extends LitElement {
     const gradientId = entity.entity_id.replace(/[.:]/g, '_');
 
     // Renderujeme kompletní SVG synchronně
-    return html`
+    return svg`
       <svg width="${width}" height="${height}" style="display: block; background: transparent;">
         <defs>
           <linearGradient id="gradient-${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -689,28 +690,21 @@ class EntityDisplayCard extends LitElement {
             <stop offset="100%" style="stop-color:${lineColor};stop-opacity:0.05" />
           </linearGradient>
         </defs>
-        ${this._unsafeHTML(gridLines)}
-        ${fill && fillPath ? html`<path d="${fillPath}" fill="url(#gradient-${gradientId})" />` : ''}
+        ${unsafeHTML(gridLines)}
+        ${fill && fillPath ? svg`<path d="${fillPath}" fill="url(#gradient-${gradientId})" />` : ''}
         <path d="${pathData}" stroke="${lineColor}" stroke-width="2" fill="${fill && !fillPath ? lineColor : 'none'}" opacity="${fill && !fillPath ? '0.3' : '1'}" stroke-linecap="round" stroke-linejoin="round"/>
-        ${this._unsafeHTML(this._createValueLabels(minValue, maxValue, height, padding))}
+        ${unsafeHTML(this._createValueLabels(minValue, maxValue, height, padding))}
       </svg>
     `;
-  }
-
-  private _unsafeHTML(htmlString: string) {
-    const template = document.createElement('template');
-    template.innerHTML = htmlString;
-    return template.content;
   }
 
   private _createSmoothPath(points: Array<{x: number, y: number, value: number}>): string {
     if (points.length < 2) return '';
 
-    // Začneme přesunem na první bod
+    // Začneme na prvním bodě
     let path = `M ${points[0].x},${points[0].y}`;
 
-    // Pro lepší smooth efekt použijeme jednodušší přístup - přímé čáry
-    // (Kvadratické Bézier křivky byly špatně implementované)
+    // Přímé čáry ke všem bodům (nejjednodušší a nejspolehlivější)
     for (let i = 1; i < points.length; i++) {
       path += ` L ${points[i].x},${points[i].y}`;
     }
