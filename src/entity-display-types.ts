@@ -156,9 +156,9 @@ export const DEFAULT_ENTITY_TYPES: Record<string, EntityTypeConfig> = {
     ranges: [
       { max: 1, color: '#1a1a1a', icon: 'mdi:brightness-1', label: 'Tma' },
       { min: 1, max: 50, color: '#595959', icon: 'mdi:brightness-2', label: 'Šero' },
-      { min: 50, max: 200, color: '#8c8c8c', icon: 'mdi:brightness-4', label: 'Stmievané' },
-      { min: 200, max: 500, color: '#bfbfbf', icon: 'mdi:brightness-5', label: 'Svetlé' },
-      { min: 500, color: '#fafafa', icon: 'mdi:brightness-7', label: 'Veľmi svetlé' },
+      { min: 50, max: 200, color: '#8c8c8c', icon: 'mdi:brightness-4', label: 'Ztmavené' },
+      { min: 200, max: 500, color: '#bfbfbf', icon: 'mdi:brightness-5', label: 'Světlé' },
+      { min: 500, color: '#fafafa', icon: 'mdi:brightness-7', label: 'Velmi světlé' },
     ],
   },
   power: {
@@ -169,10 +169,10 @@ export const DEFAULT_ENTITY_TYPES: Record<string, EntityTypeConfig> = {
     show_graph: true,
     graph_hours: 24,
     ranges: [
-      { max: 10, color: '#52c41a', icon: 'mdi:flash-off', label: 'Nízky' },
-      { min: 10, max: 100, color: '#1890ff', icon: 'mdi:flash-outline', label: 'Stredný' },
+      { max: 10, color: '#52c41a', icon: 'mdi:flash-off', label: 'Nízký' },
+      { min: 10, max: 100, color: '#1890ff', icon: 'mdi:flash-outline', label: 'Střední' },
       { min: 100, max: 500, color: '#faad14', icon: 'mdi:flash', label: 'Vysoký' },
-      { min: 500, color: '#f5222d', icon: 'mdi:flash-alert', label: 'Veľmi vysoký', warning: true },
+      { min: 500, color: '#f5222d', icon: 'mdi:flash-alert', label: 'Velmi vysoký', warning: true },
     ],
   },
   energy: {
@@ -183,10 +183,10 @@ export const DEFAULT_ENTITY_TYPES: Record<string, EntityTypeConfig> = {
     show_graph: true,
     graph_hours: 168,
     ranges: [
-      { max: 1, color: '#52c41a', icon: 'mdi:leaf', label: 'Nízka' },
-      { min: 1, max: 5, color: '#1890ff', icon: 'mdi:lightning-bolt-outline', label: 'Stredná' },
+      { max: 1, color: '#52c41a', icon: 'mdi:leaf', label: 'Nízká' },
+      { min: 1, max: 5, color: '#1890ff', icon: 'mdi:lightning-bolt-outline', label: 'Střední' },
       { min: 5, max: 10, color: '#faad14', icon: 'mdi:lightning-bolt', label: 'Vysoká' },
-      { min: 10, color: '#f5222d', icon: 'mdi:alert', label: 'Veľmi vysoká' },
+      { min: 10, color: '#f5222d', icon: 'mdi:alert', label: 'Velmi vysoká' },
     ],
   },
   carbon_dioxide: {
@@ -199,8 +199,8 @@ export const DEFAULT_ENTITY_TYPES: Record<string, EntityTypeConfig> = {
     ranges: [
       { max: 600, color: '#52c41a', icon: 'mdi:check-circle', label: 'Výborné' },
       { min: 600, max: 800, color: '#1890ff', icon: 'mdi:information', label: 'Dobré' },
-      { min: 800, max: 1000, color: '#faad14', icon: 'mdi:alert-circle', label: 'Stredné' },
-      { min: 1000, max: 1500, color: '#fa8c16', icon: 'mdi:alert', label: 'Horšie', warning: true },
+      { min: 800, max: 1000, color: '#faad14', icon: 'mdi:alert-circle', label: 'Střední' },
+      { min: 1000, max: 1500, color: '#fa8c16', icon: 'mdi:alert', label: 'Horší', warning: true },
       { min: 1500, color: '#f5222d', icon: 'mdi:alert-octagon', label: 'Zlé', warning: true },
     ],
   },
@@ -212,8 +212,8 @@ export const DEFAULT_ENTITY_TYPES: Record<string, EntityTypeConfig> = {
     ranges: [
       { max: 50, color: '#52c41a', label: 'Výborné' },
       { min: 50, max: 100, color: '#1890ff', label: 'Dobré' },
-      { min: 100, max: 300, color: '#faad14', label: 'Stredné' },
-      { min: 300, max: 500, color: '#fa8c16', label: 'Horšie', warning: true },
+      { min: 100, max: 300, color: '#faad14', label: 'Střední' },
+      { min: 300, max: 500, color: '#fa8c16', label: 'Horší', warning: true },
       { min: 500, color: '#f5222d', label: 'Zlé', warning: true },
     ],
   },
@@ -224,8 +224,8 @@ export const DEFAULT_ENTITY_TYPES: Record<string, EntityTypeConfig> = {
     precision: 0,
     ranges: [
       { max: 12, color: '#52c41a', label: 'Dobré' },
-      { min: 12, max: 35, color: '#faad14', label: 'Stredné' },
-      { min: 35, max: 55, color: '#fa8c16', label: 'Nezdravé citlivé', warning: true },
+      { min: 12, max: 35, color: '#faad14', label: 'Střední' },
+      { min: 35, max: 55, color: '#fa8c16', label: 'Nezdravé pro citlivé', warning: true },
       { min: 55, color: '#f5222d', label: 'Nezdravé', warning: true },
     ],
   },
@@ -236,7 +236,7 @@ export const DEFAULT_ENTITY_TYPES: Record<string, EntityTypeConfig> = {
     precision: 0,
     ranges: [
       { max: -90, color: '#f5222d', icon: 'mdi:wifi-strength-1', label: 'Slabý' },
-      { min: -90, max: -70, color: '#faad14', icon: 'mdi:wifi-strength-2', label: 'Priemerný' },
+      { min: -90, max: -70, color: '#faad14', icon: 'mdi:wifi-strength-2', label: 'Průměrný' },
       { min: -70, max: -50, color: '#52c41a', icon: 'mdi:wifi-strength-3', label: 'Dobrý' },
       { min: -50, color: '#1890ff', icon: 'mdi:wifi-strength-4', label: 'Výborný' },
     ],
