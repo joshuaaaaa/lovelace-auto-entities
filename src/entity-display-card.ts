@@ -620,7 +620,8 @@ class EntityDisplayCard extends LitElement {
     const typeConfig = this._getTypeConfig(entity.device_class || '', entity.entity_id.split('.')[0]);
     const graphHours = this._config.graph_hours || typeConfig.graph_hours || 24;
     const graphType = this._config.graph_type || 'line';
-    const lineColor = this._config.graph_line_color || entity.color;
+    // Výchozí barva je modrá jako v HA (#03a9f4), místo červené z entity.color
+    const lineColor = this._config.graph_line_color || 'var(--primary-color, #03a9f4)';
     const fill = this._config.graph_fill !== false;
 
     // Načteme historii asynchronně pokud ještě není v cache
@@ -701,13 +702,36 @@ class EntityDisplayCard extends LitElement {
   private _createSmoothPath(points: Array<{x: number, y: number, value: number}>): string {
     if (points.length < 2) return '';
 
-    // Začneme na prvním bodě
-    let path = `M ${points[0].x},${points[0].y}`;
+    // Implementace podle mini-graph-card pro hladké křivky
+    let path = `M${points[0].x},${points[0].y}`;
 
-    // Přímé čáry ke všem bodům (nejjednodušší a nejspolehlivější)
-    for (let i = 1; i < points.length; i++) {
-      path += ` L ${points[i].x},${points[i].y}`;
+    if (points.length === 2) {
+      path += ` L${points[1].x},${points[1].y}`;
+      return path;
     }
+
+    // Pro 3+ bodů používáme quadratic Bézier křivky pro smooth efekt
+    // První segment - čára k midpointu mezi 1. a 2. bodem
+    let midX = (points[0].x + points[1].x) / 2;
+    let midY = (points[0].y + points[1].y) / 2;
+    path += ` L${midX},${midY}`;
+
+    // Střední segmenty - quadratic Bézier křivky
+    for (let i = 1; i < points.length - 1; i++) {
+      const current = points[i];
+      const next = points[i + 1];
+
+      // Midpoint mezi current a next bodem jako endpoint
+      midX = (current.x + next.x) / 2;
+      midY = (current.y + next.y) / 2;
+
+      // Q command: control point je current bod, endpoint je midpoint
+      path += ` Q${current.x},${current.y} ${midX},${midY}`;
+    }
+
+    // Poslední segment - čára k poslednímu bodu
+    const lastPoint = points[points.length - 1];
+    path += ` L${lastPoint.x},${lastPoint.y}`;
 
     return path;
   }
