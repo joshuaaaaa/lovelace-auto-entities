@@ -4,6 +4,7 @@ export interface EntityDisplayConfig {
   type: string;
   title?: string;
   entities?: string[];
+  exclude_entities?: string[];
   filter?: EntityDisplayFilter;
   layout?: 'list' | 'grid' | 'gauge' | 'compact' | 'detailed';
   columns?: number;
