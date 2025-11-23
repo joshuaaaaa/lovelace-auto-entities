@@ -70,7 +70,7 @@ class EntityDisplayCard extends LitElement {
   private _updateEntities() {
     if (!this.hass || !this._config) return;
 
-    const entities: ProcessedEntity[] = [];
+    let entities: ProcessedEntity[] = [];
     const invalidStates = ['unknown', 'none', 'unavailable', 'null', 'undefined', 'normal'];
 
     // Získání entit ze konfigurace
@@ -99,6 +99,14 @@ class EntityDisplayCard extends LitElement {
       if (processed) {
         entities.push(processed);
       }
+    }
+
+    // Seřazení entit
+    entities = this._sortEntities(entities);
+
+    // Limitování počtu zobrazených entit
+    if (this._config.max_entities && this._config.max_entities > 0) {
+      entities = entities.slice(0, this._config.max_entities);
     }
 
     this._entities = entities;
@@ -537,15 +545,11 @@ class EntityDisplayCard extends LitElement {
       // Používáme REST API endpoint jako mini-graph-card
       const url = `history/period/${startTime.toISOString()}?filter_entity_id=${entityId}&end_time=${endTime.toISOString()}&minimal_response&no_attributes&significant_changes_only=0`;
 
-      console.log(`Fetching history for ${entityId} from ${url}`);
       const history = await this.hass.callApi('GET', url);
 
       if (!history || !history[0] || history[0].length === 0) {
-        console.warn(`No history data for ${entityId}`);
         return [];
       }
-
-      console.log(`Received ${history[0].length} history points for ${entityId}`);
 
       // Zpracování dat - [timestamp, value]
       const dataPoints: number[][] = [];
@@ -573,11 +577,8 @@ class EntityDisplayCard extends LitElement {
       }
 
       if (dataPoints.length === 0) {
-        console.warn(`No valid numeric data points for ${entityId}`);
         return [];
       }
-
-      console.log(`Processed ${dataPoints.length} valid data points for ${entityId}`);
 
       // Agregace dat pokud je jich příliš mnoho (max 100 bodů)
       if (dataPoints.length > 100) {
@@ -616,13 +617,7 @@ class EntityDisplayCard extends LitElement {
 
     // Načteme historii asynchronně
     this._fetchHistory(entity.entity_id, graphHours).then((dataPoints) => {
-      if (dataPoints.length === 0) {
-        console.warn(`No data points to render for ${entity.entity_id}`);
-        return;
-      }
-
-      if (dataPoints.length < 2) {
-        console.warn(`Not enough data points (${dataPoints.length}) for ${entity.entity_id}`);
+      if (dataPoints.length === 0 || dataPoints.length < 2) {
         return;
       }
 
@@ -669,11 +664,8 @@ class EntityDisplayCard extends LitElement {
         );
 
         if (!graphContainer) {
-          console.error(`Graph container not found for ${entity.entity_id}`);
           return;
         }
-
-        console.log(`Updating graph for ${entity.entity_id} with ${dataPoints.length} points`);
 
         const gridLines = this._createGridLines(width, height, padding, minValue, maxValue);
         const gradientId = entity.entity_id.replace(/[.:]/g, '_');
@@ -708,23 +700,14 @@ class EntityDisplayCard extends LitElement {
   private _createSmoothPath(points: Array<{x: number, y: number, value: number}>): string {
     if (points.length < 2) return '';
 
+    // Začneme přesunem na první bod
     let path = `M ${points[0].x},${points[0].y}`;
 
-    // Použijeme kvadratické Bézier křivky pro smooth efekt
-    for (let i = 0; i < points.length - 1; i++) {
-      const current = points[i];
-      const next = points[i + 1];
-
-      // Control point je uprostřed mezi aktuálním a dalším bodem
-      const controlX = (current.x + next.x) / 2;
-      const controlY = (current.y + next.y) / 2;
-
-      path += ` Q ${current.x},${current.y} ${controlX},${controlY}`;
+    // Pro lepší smooth efekt použijeme jednodušší přístup - přímé čáry
+    // (Kvadratické Bézier křivky byly špatně implementované)
+    for (let i = 1; i < points.length; i++) {
+      path += ` L ${points[i].x},${points[i].y}`;
     }
-
-    // Poslední segment
-    const last = points[points.length - 1];
-    path += ` L ${last.x},${last.y}`;
 
     return path;
   }
@@ -741,10 +724,21 @@ class EntityDisplayCard extends LitElement {
     return lines.join('');
   }
 
+  private _formatGraphValue(value: number): string {
+    // Inteligentní formátování podle velikosti hodnoty
+    if (Math.abs(value) >= 100) {
+      return value.toFixed(0); // Pro velké hodnoty bez desetinných míst
+    } else if (Math.abs(value) >= 10) {
+      return value.toFixed(1); // Pro střední hodnoty jedno desetinné místo
+    } else {
+      return value.toFixed(2); // Pro malé hodnoty dvě desetinná místa
+    }
+  }
+
   private _createValueLabels(minValue: number, maxValue: number, height: number, padding: number): string {
     return `
-      <text x="2" y="${padding + 3}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${maxValue.toFixed(1)}</text>
-      <text x="2" y="${height - padding}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${minValue.toFixed(1)}</text>
+      <text x="2" y="${padding + 10}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${this._formatGraphValue(maxValue)}</text>
+      <text x="2" y="${height - padding + 2}" fill="var(--secondary-text-color)" font-size="9" opacity="0.7">${this._formatGraphValue(minValue)}</text>
     `;
   }
 

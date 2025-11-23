@@ -56,6 +56,7 @@ export interface Translations {
   editor_sort_reverse: string;
   editor_ignore_invalid: string;
   editor_ignore_invalid_desc: string;
+  editor_max_entities: string;
 
   editor_section_graphs: string;
   editor_section_graphs_desc: string;
@@ -155,6 +156,7 @@ const translations: Record<string, Translations> = {
     editor_sort_reverse: 'Reverse order (descending)',
     editor_ignore_invalid: 'Ignore invalid states (unknown, unavailable)',
     editor_ignore_invalid_desc: 'Hide entities with invalid states',
+    editor_max_entities: 'Maximum entities to display (0 = unlimited)',
 
     editor_section_graphs: 'Graphs',
     editor_section_graphs_desc: 'Graph configuration for detailed layout',
@@ -250,6 +252,7 @@ const translations: Record<string, Translations> = {
     editor_sort_reverse: 'Obrátit pořadí (sestupně)',
     editor_ignore_invalid: 'Ignorovat neplatné stavy (unknown, unavailable)',
     editor_ignore_invalid_desc: 'Skrýt entity s neplatnými stavy',
+    editor_max_entities: 'Maximální počet zobrazených entit (0 = neomezeno)',
 
     editor_section_graphs: 'Grafy',
     editor_section_graphs_desc: 'Konfigurace grafů pro detailed layout',

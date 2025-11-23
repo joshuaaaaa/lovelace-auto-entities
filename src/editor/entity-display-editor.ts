@@ -244,6 +244,18 @@ class EntityDisplayEditor extends LitElement {
             ></ha-checkbox>
           </ha-formfield>
         </div>
+
+        <div class="editor-row">
+          <ha-textfield
+            label="${localize('editor_max_entities', lang)}"
+            type="number"
+            min="0"
+            max="1000"
+            .configValue=${'max_entities'}
+            .value=${this._config.max_entities || 0}
+            @change=${this._valueChanged}
+          ></ha-textfield>
+        </div>
       </div>
 
       <div class="editor-section">
